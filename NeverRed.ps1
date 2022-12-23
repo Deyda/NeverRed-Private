@@ -179,6 +179,25 @@ the script checks the version number and will update the package.
   2022-10-31        Add download function for ControlUp Edge DX Agent Manager / Add download and install of ControlUp Edge DX Agent Manager
   2022-11-03        Query adjusted so that only 1 result is returned for Mozilla Firefox
   2022-11-19        Correction Citrix Workspace App CR download
+  2022-11-25        Implement Report Mode basic framework
+  2022-11-27        Implement Report Mode for 1Password and 7-Zip
+  2022-11-30        Implement Report Mode for Adobe Pro DC, Adobe Reader DC and Autodesk DWG TrueView
+  2022-12-01        Implement Report Mode for BIS-F, Cisco Webex Teams and Citrix Files
+  2022-12-02        Implement Report Mode for Citrix Hypervisor Tools, Citrix Workspace App, ControlUp Agent and ControlUp Edge DX
+  2022-12-05        Implement Report Mode for ControlUp Remote DX, ControlUp Console, deviceTRUST and Ditto
+  2022-12-07        Implement Report Mode for Filezilla, Foxit PDF Editor, Foxit Reader, GIMP, Git for Windows and Google Chrome
+  2022-12-08        Implement Report Mode for GReenshot, IIS Crypto, ImageGlass, IrfanView, KeePass, LogMeIn GoToMeeting, Microsoft .Net Framework, Microsoft 365 Apps, Microsoft AVD Remote Desktop and Microsoft Azure CLI / Add Silent Warning to Microsoft AVD Remote Desktop download url search
+  2022-12-11        Implement Report Mode for Microsoft Azure Data Studio, Microsoft Edge, Microsoft Edge WebView2, Microsoft FSLogix, Microsoft Office, Microsoft OneDrive, Microsoft Power BI Desktop, Microsoft Power BI Report Builder, Microsoft PowerShell, Microsoft PowerToys, Microsoft SQL Server Management Studio / Adaptation of the recognized versions for Microsoft SQL Server Management Studio to a uniform format
+  2022-12-13        Implement Report Mode for Microsoft Sysinternals, Microsoft Teams, Microsoft Visual C++ Runtime, Microsoft Visual Studio 2019 and Microsoft Visual Studio Code
+  2022-12-14        Implement Report Mode for MindView 7, Mozilla Firefox, Mozilla Thunderbird, mRemoteNG, Nmap, Notepad++, OpenJDK, Open-Shell Menu and Opera Browser
+  2022-12-15        Implement Report Mode for Oracle Java 8, Paint.Net, PDF24 Creator, pdfforge PDFCreator, PDF Split & Merge, PeaZip and PuTTY
+  2022-12-16        Implement Report Mode for Remote Desktop Manager, Remote Display Analyzer, Screenpresso, ShareX, Slack, Sumatra PDF and TeamViewer
+  2022-12-17        Implement Report Mode for TechSmith Camtasia, TechSmith Snagit, Total Commander, TreeSize and VLC Player
+  2022-12-18        Implement Report Mode for VMWareTools, WinMerge, WinRAR, WinSCP, Wireshark, XCA and Zoom
+  2022-12-19        Correction 1Password install to not silent / Correction Autodesk DWG TrueView installer path / Correction BIS-F install version
+  2022-12-20        Correction Installer for Cisco Webex Teams and Cisco Webex Teams VDI Plugin
+  2022-12-21        Correction Cisco Webex Teams version
+
 
 .PARAMETER ESfile
 
@@ -868,6 +887,47 @@ Function Get-ControlUpEdgeDX() {
     }
 }
 
+# Function Cisco Webex Teams Download
+#========================================================================================================================================
+Function Get-CiscoWebex() {
+    [OutputType([System.Management.Automation.PSObject])]
+    [CmdletBinding()]
+    Param ()
+    $appURLVersion = "https://www.webex.com/downloads/teams-vdi.html"
+    Try {
+        $webRequest = Invoke-WebRequest -UseBasicParsing -Uri ($appURLVersion) -SessionVariable websession
+    }
+    Catch {
+        Throw "Failed to connect to URL: $appURLVersion with error $_."
+        Break
+    }
+    Finally {
+        $regexAppVersion = "Webex App.*\(.*\)"
+        $regexAppURL64 = "vdi-hvd-aws-gold\/.*\/Webex\.msi"
+        $regexAppURL32 = "vdi-hvd-aws-gold\/.*\/Webex_x86\.msi"
+        $webVersionCW = $webRequest.RawContent | Select-String -Pattern $regexAppVersion -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 1
+        $appVersion = $webVersionCW.Split("(")[1].Trim(")")
+        $webURL64 = $webRequest.RawContent | Select-String -Pattern $regexAppURL64 -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 1
+        $appxURL64 = "https://binaries.webex.com/" + $webURL64
+        $webURL32 = $webRequest.RawContent | Select-String -Pattern $regexAppURL32 -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 1
+        $appxURL32 = "https://binaries.webex.com/" + $webURL32
+
+        $PSObjectx64 = [PSCustomObject] @{
+            Version      = "$appVersion"
+            Architecture = "x64"
+            URI          = $appxURL64
+        }
+        $PSObjectx86 = [PSCustomObject] @{
+            Version      = "$appVersion"
+            Architecture = "x86"
+            URI          = $appxURL32
+        }
+
+        Write-Output -InputObject $PSObjectx64
+        Write-Output -InputObject $PSObjectx86
+    }
+}
+
 # Function Cisco Webex VDI Plugin Download
 #========================================================================================================================================
 Function Get-CiscoWebexVDI() {
@@ -883,7 +943,7 @@ Function Get-CiscoWebexVDI() {
         Break
     }
     Finally {
-        $regexAppVersion = "Thin-client Plugin.*\(.*\)"
+        $regexAppVersion = "Webex App VDI Plugin.*\(.*\)"
         $regexAppURL64 = "WebexTeamsDesktop-Windows-VDI-gold-Production\/.*\/WebexVDIPlugin\.msi"
         $regexAppURL32 = "WebexTeamsDesktop-Windows-VDI-gold-Production\/.*\/WebexVDIPlugin_x86\.msi"
         $webVersionCW = $webRequest.RawContent | Select-String -Pattern $regexAppVersion -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 1
@@ -4183,7 +4243,7 @@ $inputXML = @"
                     </ComboBox>
                     <Label x:Name="Label_Explanation" Content="Selected globally, can be defined individually via Detail tab." HorizontalAlignment="Left" Margin="43,50,0,0" VerticalAlignment="Top" FontSize="10" Grid.RowSpan="2" Grid.Column="1"/>
                     <Label x:Name="Label_Software" Content="Select Software" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
-                    <CheckBox x:Name="Checkbox_1Password" Content="1Password" HorizontalAlignment="Left" Margin="12,30,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
+                    <CheckBox x:Name="Checkbox_1Password" Content="1Password" HorizontalAlignment="Left" Margin="12,30,0,0" VerticalAlignment="Top" Grid.Column="0" ToolTip="No silent installation!" Grid.Row="1"/>
                     <CheckBox x:Name="Checkbox_7Zip" Content="7 Zip" HorizontalAlignment="Left" Margin="12,50,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
                     <CheckBox x:Name="Checkbox_AdobeProDC" Content="Adobe Pro DC" HorizontalAlignment="Left" Margin="12,70,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
                     <CheckBox x:Name="Checkbox_AdobeReaderDC" Content="Adobe Reader DC" HorizontalAlignment="Left" Margin="12,90,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"/>
@@ -4305,7 +4365,7 @@ $inputXML = @"
                     <CheckBox x:Name="Checkbox_MSSysinternals" Content="Microsoft Sysinternals" Margin="12,190,0,0" VerticalAlignment="Top" Grid.Column="1" HorizontalAlignment="Left" ToolTip="Only Download" Grid.Row="1"/>
                     <CheckBox x:Name="Checkbox_MSTeams" Content="Microsoft Teams" HorizontalAlignment="Left" Margin="12,210,0,0" VerticalAlignment="Top" Grid.Column="1" Grid.Row="1"/>
                     <CheckBox x:Name="Checkbox_MSTeams_No_AutoStart" Content="No AutoStart" HorizontalAlignment="Left" Margin="345,210,0,0" VerticalAlignment="Top" Grid.Column="1" ToolTip="Delete the HKLM Run entry to AutoStart Microsoft Teams" Grid.Row="1"/>
-                    <ComboBox x:Name="Box_MSTeams" HorizontalAlignment="Left" Margin="214,205,0,0" VerticalAlignment="Top" SelectedIndex="1" Grid.Column="1" Grid.Row="1">
+                    <ComboBox x:Name="Box_MSTeams" HorizontalAlignment="Left" Margin="214,205,0,0" VerticalAlignment="Top" SelectedIndex="3" Grid.Column="1" Grid.Row="1">
                         <ListBoxItem Content="Continuous Ring"/>
                         <ListBoxItem Content="Exploration Ring"/>
                         <ListBoxItem Content="Preview Ring"/>
@@ -10466,6 +10526,7 @@ If ($Report -eq "1") {
         If (!$DWGTrueView) {
             $DWGTrueView = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*DWG TrueView*"}).DisplayName | Sort-Object -Property Version -Descending | Select-Object -First 1
         }
+        If ($DWGTrueView) {$DWGTrueView = $DWGTrueView.split(" ")[2]}
         Write-Host -ForegroundColor Magenta "$Product"
         Add-Content -Path "$ReportFile" -Value "$Product"
         Add-Content -Path "$ReportFile" -Value ""
@@ -10517,6 +10578,10 @@ If ($Report -eq "1") {
         If (!$BISFV) {
             $BISFV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Base Image*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
         }
+        If ($BISFV) {
+            $BISFSplit = $BISFV.split(".")
+            $BISFV = $BISFSplit[0] + "." + $BISFSplit[1] + "." + $BISFSplit[2]
+        }
         Write-Host -ForegroundColor Magenta "$Product"
         Add-Content -Path "$ReportFile" -Value "$Product"
         Add-Content -Path "$ReportFile" -Value ""
@@ -10561,13 +10626,31 @@ If ($Report -eq "1") {
     If ($CiscoWebexTeams -eq 1) {
         If ($CiscoWebexTeamsClient -eq "0") {
             $Product = "Cisco Webex Teams"
-            $WebexTeamsD = Get-NevergreenApp -Name CiscoWebex | Where-Object { $_.Architecture -eq "$CiscoWebexTeamsArchitectureClear" -and $_.Type -eq "Msi" }
+            $WebexTeamsD = Get-CiscoWebex | Where-Object { $_.Architecture -eq "$CiscoWebexTeamsArchitectureClear"}
             $Version = $WebexTeamsD.Version
+            $CiscoSplit = $Version.split(".")
+            $CiscoStringMiddle = ([regex]::Matches($CiscoSplit[1], "." )).count
+            If ($CiscoStringMiddle -lt "2") {
+                $CiscoSplit[1] = "0" + $CiscoSplit[1]
+                $Version = $CiscoSplit[0] + "." + $CiscoSplit[1] + "." + $CiscoSplit[2] + "." + $CiscoSplit[3]
+            }
             $VersionPath = "$PSScriptRoot\$Product\Version_" + "$CiscoWebexTeamsArchitectureClear" + ".txt"
             $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+            $CiscoCurrentSplit = $CurrentVersion.split(".")
+            $CiscoCurrentStringMiddle = ([regex]::Matches($CiscoCurrentSplit[1], "." )).count
+            If ($CiscoCurrentStringMiddle -lt "2") {
+                $CiscoCurrentSplit[1] = "0" + $CiscoCurrentSplit[1]
+                $CurrentVersion = $CiscoCurrentSplit[0] + "." + $CiscoCurrentSplit[1] + "." + $CiscoCurrentSplit[2] + "." + $CiscoCurrentSplit[3]
+            }
             $CiscoWebexTeamsV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Webex"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
             If (!$CiscoWebexTeamsV) {
             $CiscoWebexTeamsV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Webex"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            $CiscoDSplit = $CiscoWebexTeamsV.split(".")
+            $CiscoDStringMiddle = ([regex]::Matches($CiscoDSplit[1], "." )).count
+            If ($CiscoDStringMiddle -lt "2") {
+                $CiscoDSplit[1] = "0" + $CiscoDSplit[1]
+                $CiscoWebexTeamsV = $CiscoDSplit[0] + "." + $CiscoDSplit[1] + "." + $CiscoDSplit[2] + "." + $CiscoDSplit[3]
             }
             Write-Host -ForegroundColor Magenta "$Product $CiscoWebexTeamsArchitectureClear"
             Add-Content -Path "$ReportFile" -Value "$Product $CiscoWebexTeamsArchitectureClear"
@@ -10626,7 +10709,7 @@ If ($Report -eq "1") {
             Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
             Write-Host "Downloaded Version: $CurrentVersion"
             Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
-            Write-Host "Installed Version:  $DWGTrueView"
+            Write-Host "Installed Version:  $WebexTeamsVDIV"
             Add-Content -Path "$ReportFile" -Value "Installed Version:  $WebexTeamsVDIV"
             Add-Content -Path "$ReportFile" -Value ""
             If ($CurrentVersion -lt $Version) {
@@ -10885,6 +10968,4708 @@ If ($Report -eq "1") {
             Add-Content -Path "$ReportFile" -Value "No update available for installed version"
             Write-Output ""
             Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($ControlUpEdgeDX -eq 1) {
+        $Product = "ControlUp Edge DX Agent Manager"
+        $ControlUpEdgeDXD = Get-ControlUpEdgeDX
+        $Version = $ControlUpEdgeDXD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $ControlUpEdgeDXV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "ControlUp Edge DX - SIP Agent"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$ControlUpEdgeDXV) {
+            $ControlUpEdgeDXV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "ControlUp Edge DX - SIP Agent"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $ControlUpEdgeDXInstallerClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $ControlUpEdgeDXInstallerClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $ControlUpEdgeDXV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $ControlUpEdgeDXV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($ControlUpEdgeDXV -lt $Version) {
+            If (!$ControlUpEdgeDXV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($ControlUpRemoteDX -eq 1) {
+        $Product = "ControlUp Remote DX"
+        $CURDXD = Get-ControlUpRemoteDX | Where-Object { $_.Environment -eq "$ControlUpRemoteDXEUCClear"}
+        $Version = $CURDXD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$ControlUpRemoteDXEUCClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -ErrorAction SilentlyContinue
+        $CURDXV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "ControlUp Remote DX - $ControlUpRemoteDXEUCDLClear*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$CURDXV) {
+            $CURDXV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "ControlUp Remote DX - $ControlUpRemoteDXEUCDLClear*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $ControlUpRemoteDXEUCClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $ControlUpRemoteDXEUCClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $CURDXV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $CURDXV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($CURDXV -lt $Version) {
+            If (!$CURDXV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($ControlUpConsole -eq 1) {
+        $Product = "ControlUp Console"
+        $ControlUpConsoleD = Get-EvergreenApp -Name ControlUpConsole
+        $Version = $ControlUpConsoleD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($deviceTRUST -eq 1) {
+        $Product = "deviceTRUST"
+        $deviceTRUSTD = Get-EvergreenApp -Name deviceTRUST | Where-Object { $_.Platform -eq "Windows" -and $_.Type -eq "Bundle" } | Sort-Object -Property Version -Descending | Select-Object -First 1
+        $Version = $deviceTRUSTD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$deviceTRUSTArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $deviceTRUSTClientV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Client*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$deviceTRUSTClientV) {
+            $deviceTRUSTClientV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Client*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        $deviceTRUSTHostV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Host*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$deviceTRUSTHostV) {
+            $deviceTRUSTHostV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Host*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        $deviceTRUSTHostV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Agent*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$deviceTRUSTHostV) {
+            $deviceTRUSTHostV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Agent*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        $deviceTRUSTConsoleV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Console*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$deviceTRUSTConsoleV) {
+            $deviceTRUSTConsoleV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*deviceTRUST Console*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($deviceTRUSTClient -eq $True) {
+            Write-Host -ForegroundColor Magenta "$Product Client Extension"
+            Add-Content -Path "$ReportFile" -Value "$Product Client Extension"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+            Write-Host "Downloaded Version: $CurrentVersion"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+            Write-Host "Installed Version:  $deviceTRUSTClientV"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $deviceTRUSTClientV"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion -lt $Version) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($deviceTRUSTClientV -lt $Version) {
+                If (!$deviceTRUSTClientV) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        }
+        If ($deviceTRUSTHost -eq $True) {
+            Write-Host -ForegroundColor Magenta "$Product Agent $deviceTRUSTArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value "$Product Agent $deviceTRUSTArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+            Write-Host "Downloaded Version: $CurrentVersion"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+            Write-Host "Installed Version:  $deviceTRUSTHostV"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $deviceTRUSTHostV"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion -lt $Version) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($deviceTRUSTHostV -lt $Version) {
+                If (!$deviceTRUSTHostV) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        }
+        If ($deviceTRUSTConsole -eq $True) {
+            Write-Host -ForegroundColor Magenta "$Product Console $deviceTRUSTArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value "$Product Console $deviceTRUSTArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+            Write-Host "Downloaded Version: $CurrentVersion"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+            Write-Host "Installed Version:  $deviceTRUSTConsoleV"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $deviceTRUSTConsoleV"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion -lt $Version) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($deviceTRUSTConsoleV -lt $Version) {
+                If (!$deviceTRUSTConsoleV) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        }
+    }
+
+    If ($Ditto -eq 1) {
+        $Product = "Ditto"
+        $DittoD = Get-Ditto | Where-Object { $_.Architecture -eq "$DittoArchitectureClear" -and $_.Channel -eq "$DittoChannelClear"}
+        $Version = $DittoD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$DittoArchitectureClear" + "_$DittoChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -ErrorAction SilentlyContinue
+        $DittoV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Ditto*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$DittoV) {
+            $DittoV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Ditto*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $DittoChannelClear channel $DittoArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $DittoChannelClear channel $DittoArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $DittoV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $DittoV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($DittoV -lt $Version) {
+            If (!$DittoV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Filezilla -eq 1) {
+        $Product = "Filezilla"
+        $FilezillaD = Get-EvergreenApp -Name Filezilla | Where-Object { $_.URI -like "*win64*"}
+        $Version = $FilezillaD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $FilezillaV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Filezilla*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$FilezillaV) {
+            $FilezillaV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Filezilla*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $FilezillaV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $FilezillaV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($FilezillaV -lt $Version) {
+            If (!$FilezillaV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($FoxitPDFEditor -eq 1) {
+        $Product = "Foxit PDF Editor"
+        $FoxitPDFEditorD = Get-EvergreenApp -Name FoxitPDFEditor -WarningAction:SilentlyContinue | Where-Object {$_.Language -eq "$FoxitPDFEditorLanguageClear"}
+        $Version = $FoxitPDFEditorD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$FoxitPDFEditorLanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $FoxitPDFEditorV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Foxit PDF Editor"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$FoxitPDFEditorV) {
+            $FoxitPDFEditorV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Foxit PDF Editor"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $FoxitPDFEditorLanguageClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $FoxitPDFEditorLanguageClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $FoxitPDFEditorV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $FoxitPDFEditorV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($FoxitPDFEditorV -lt $Version) {
+            If (!$FoxitPDFEditorV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Foxit_Reader -eq 1) {
+        $Product = "Foxit Reader"
+        $Foxit_ReaderD = Get-EvergreenApp -Name FoxitReader | Where-Object {$_.Language -eq "$FoxitReaderLanguageClear"}
+        $Version = $Foxit_ReaderD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$FoxitReaderLanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $FReader = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Foxit Reader*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$FReader) {
+            $FReader = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Foxit Reader*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $FoxitReaderLanguageClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $FoxitReaderLanguageClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $FReader"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $FReader"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($FReader -lt $Version) {
+            If (!$FReader) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($GIMP -eq 1) {
+        $Product = "GIMP"
+        $GIMPD = Get-EvergreenApp -Name GIMP
+        $Version = $GIMPD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $GIMPV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*GIMP*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$GIMPV) {
+            $GIMPV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*GIMP*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $GIMPV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $GIMPV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($GIMPV -lt $Version) {
+            If (!$GIMPV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($GitForWindows -eq 1) {
+        $Product = "Git for Windows"
+        $GitForWindowsD = Get-EvergreenApp -Name GitForWindows | Where-Object {$_.Architecture -eq "$GitForWindowsArchitectureClear" -and $_.Type -eq "exe" -and $_.URI -like "*bit.exe"}
+        $Version = $GitForWindowsD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$GitForWindowsArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $GitForWindowsV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Git"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$GitForWindowsV) {
+            $GitForWindowsV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Git"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $GitForWindowsArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $GitForWindowsArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $GitForWindowsV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $GitForWindowsV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($GitForWindowsV -lt $Version) {
+            If (!$GitForWindowsV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($GoogleChrome -eq 1) {
+        $Product = "Google Chrome"
+        $ChromeD = Get-EvergreenApp -Name GoogleChrome | Where-Object { $_.Architecture -eq "$GoogleChromeArchitectureClear" -and $_.Channel -eq "$GoogleChromeChannelClear"}
+        $Version = $ChromeD.Version
+        $ChromeSplit = $Version.split(".")
+        $ChromeStrings = ([regex]::Matches($Version, "\." )).count
+        $ChromeStringLast = ([regex]::Matches($ChromeSplit[$ChromeStrings], "." )).count
+        If ($ChromeStringLast -lt "3") {
+            $ChromeSplit[$ChromeStrings] = "0" + $ChromeSplit[$ChromeStrings]
+        }
+        Switch ($ChromeStrings) {
+            1 {
+                $NewVersion = $ChromeSplit[0] + "." + $ChromeSplit[1]
+            }
+            2 {
+                $NewVersion = $ChromeSplit[0] + "." + $ChromeSplit[1] + "." + $ChromeSplit[2]
+            }
+            3 {
+                $NewVersion = $ChromeSplit[0] + "." + $ChromeSplit[1] + "." + $ChromeSplit[2] + "." + $ChromeSplit[3]
+            }
+        }
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$GoogleChromeArchitectureClear" + "_$GoogleChromeChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $NewCurrentVersion = ""
+        If ($CurrentVersion) {
+            $CurrentChromeSplit = $CurrentVersion.split(".")
+            $CurrentChromeStrings = ([regex]::Matches($CurrentVersion, "\." )).count
+            $CurrentChromeStringLast = ([regex]::Matches($CurrentChromeSplit[$CurrentChromeStrings], "." )).count
+            $CurrentChromeStringFirst = ([regex]::Matches($CurrentChromeSplit[0], "." )).count
+            If ($CurrentChromeStringLast -lt "3") {
+                $CurrentChromeSplit[$CurrentChromeStrings] = "0" + $CurrentChromeSplit[$CurrentChromeStrings]
+            }
+            If ($CurrentChromeStringFirst -lt "3") {
+                $CurrentChromeSplit[0] = "0" + $CurrentChromeSplit[0]
+            }
+            Switch ($CurrentChromeStrings) {
+                1 {
+                    $NewCurrentVersion = $CurrentChromeSplit[0] + "." + $CurrentChromeSplit[1]
+                }
+                2 {
+                    $NewCurrentVersion = $CurrentChromeSplit[0] + "." + $CurrentChromeSplit[1] + "." + $CurrentChromeSplit[2]
+                }
+                3 {
+                    $NewCurrentVersion = $CurrentChromeSplit[0] + "." + $CurrentChromeSplit[1] + "." + $CurrentChromeSplit[2] + "." + $CurrentChromeSplit[3]
+                }
+            }
+        }
+        If ($GoogleChromeChannelClear -eq "stable") {
+            $Chrome = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Google Chrome"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$Chrome) {
+                $Chrome = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Google Chrome"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($GoogleChromeChannelClear -eq "dev") {
+            $Chrome = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Google Chrome Dev"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$Chrome) {
+                $Chrome = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Google Chrome Dev"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($GoogleChromeChannelClear -eq "beta") {
+            $Chrome = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Google Chrome Beta"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$Chrome) {
+                $Chrome = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Google Chrome Beta"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($Chrome) {
+            $CurrentChromeSplit1 = $Chrome.split(".")
+            $CurrentChromeStrings1 = ([regex]::Matches($Chrome, "\." )).count
+            $CurrentChromeStringLast1 = ([regex]::Matches($CurrentChromeSplit1[$CurrentChromeStrings1], "." )).count
+            $CurrentChromeStringFirst1 = ([regex]::Matches($CurrentChromeSplit1[0], "." )).count
+            If ($CurrentChromeStringLast1 -lt "3") {
+                $CurrentChromeSplit1[$CurrentChromeStrings1] = "0" + $CurrentChromeSplit1[$CurrentChromeStrings1]
+            }
+            If ($CurrentChromeStringFirst1 -lt "3") {
+                $CurrentChromeSplit1[0] = "0" + $CurrentChromeSplit1[0]
+            }
+            Switch ($CurrentChromeStrings1) {
+                1 {
+                    $NewCurrentVersion1 = $CurrentChromeSplit1[0] + "." + $CurrentChromeSplit1[1]
+                }
+                2 {
+                    $NewCurrentVersion1 = $CurrentChromeSplit1[0] + "." + $CurrentChromeSplit1[1] + "." + $CurrentChromeSplit1[2]
+                }
+                3 {
+                    $NewCurrentVersion1 = $CurrentChromeSplit1[0] + "." + $CurrentChromeSplit1[1] + "." + $CurrentChromeSplit1[2] + "." + $CurrentChromeSplit1[3]
+                }
+            }
+        }
+        Write-Host -ForegroundColor Magenta "$Product $GoogleChromeChannelClear channel $GoogleChromeArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $GoogleChromeChannelClear channel $GoogleChromeArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $NewVersion"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $NewVersion"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $NewCurrentVersion1"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $NewCurrentVersion1"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($NewCurrentVersion -lt $NewVersion) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($NewCurrentVersion1 -lt $NewVersion) {
+            If (!$NewCurrentVersion1) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Greenshot -eq 1) {
+        $Product = "Greenshot"
+        $GreenshotD = Get-EvergreenApp -Name Greenshot | Where-Object { $_.Architecture -eq "x86" -and $_.URI -like "*INSTALLER*" -and $_.Type -like "exe"}
+        $Version = $GreenshotD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $GreenshotV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Greenshot*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$GreenshotV) {
+            $GreenshotV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Greenshot*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $GreenshotV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $GreenshotV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($GreenshotV -lt $Version) {
+            If (!$GreenshotV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($IISCrypto -eq 1) {
+        $Product = "IIS Crypto"
+        $IISCryptoD = Get-IISCrypto
+        $Version = $IISCryptoD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($ImageGlass -eq 1) {
+        $Product = "ImageGlass"
+        $ImageGlassD = Get-EvergreenApp -Name ImageGlass | Where-Object { $_.Architecture -eq "$ImageGlassArchitectureClear" -and $_.URI -notlike "*deleted*"  }
+        $Version = $ImageGlassD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$ImageGlassArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $ImageGlassV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "ImageGlass"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$ImageGlassV) {
+            $ImageGlassV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "ImageGlass"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $ImageGlassArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $ImageGlassArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $ImageGlassV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $ImageGlassV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($ImageGlassV -lt $Version) {
+            If (!$ImageGlassV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($IrfanView -eq 1) {
+        $Product = "IrfanView"
+        $IrfanViewD = Get-IrfanView | Where-Object {$_.Architecture -eq "$IrfanViewArchitectureClear"}
+        $Version = $IrfanViewD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$IrfanViewArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path $VersionPath -EA SilentlyContinue 
+        $IrfanViewV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*IrfanView*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$IrfanViewV) {
+            $IrfanViewV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*IrfanView*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $IrfanViewLanguageLongClear $IrfanViewArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $IrfanViewLanguageLongClear $IrfanViewArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $IrfanViewV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $IrfanViewV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($IrfanViewV -lt $Version) {
+            If (!$IrfanViewV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($KeePass -eq 1) {
+        $Product = "KeePass"
+        $KeePassD = Get-EvergreenApp -Name KeePass | Where-Object { $_.Type -eq "msi" }
+        $Version = $KeePassD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt"-EA SilentlyContinue 
+        $KeePassV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*KeePass*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$KeePassV) {
+            $KeePassV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*KeePass*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $KeePassLanguageClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $KeePassLanguageClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $KeePassV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $KeePassV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($KeePassV -lt $Version) {
+            If (!$KeePassV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($LogMeInGoToMeeting -eq 1) {
+        If ($LogMeInGoToMeetingInstallerClear -eq 'Machine Based') {
+            $Product = "LogMeIn GoToMeeting XenApp"
+            $LogMeInGoToMeetingD = Get-EvergreenApp -Name LogMeInGoToMeeting | Where-Object { $_.Type -eq "XenAppLatest" }
+            $Version = $LogMeInGoToMeetingD.Version
+            $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt"-EA SilentlyContinue 
+            $LogMeInGoToMeetingV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*GoToMeeting*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$LogMeInGoToMeetingV) {
+                $LogMeInGoToMeetingV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*GoToMeeting*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($LogMeInGoToMeetingInstallerClear -eq 'User Based') {
+            $Product = "LogMeIn GoToMeeting"
+            $LogMeInGoToMeetingD = Get-EvergreenApp -Name LogMeInGoToMeeting | Where-Object { $_.Type -eq "Latest" }
+            $Version = $LogMeInGoToMeetingD.Version
+            $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt"-EA SilentlyContinue 
+            $LogMeInGoToMeetingV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*GoToMeeting*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$LogMeInGoToMeetingV) {
+                $LogMeInGoToMeetingV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*GoToMeeting*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $LogMeInGoToMeetingV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $LogMeInGoToMeetingV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($LogMeInGoToMeetingV -lt $Version) {
+            If (!$LogMeInGoToMeetingV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSDotNetFramework -eq 1) {
+        $Product = "Microsoft Dot Net Framework"
+        $MSDotNetFrameworkD = Get-EvergreenApp -Name Microsoft.NET | Where-Object {$_.Architecture -eq "$MSDotNetFrameworkArchitectureClear" -and $_.Channel -eq "$MSDotNetFrameworkChannelClear" -and $_.installer -eq "windowsdesktop" }
+        $Version = $MSDotNetFrameworkD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSDotNetFrameworkArchitectureClear" + "_$MSDotNetFrameworkChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSDotNetFrameworkV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Windows Desktop Runtime*" -and $_.URLInfoAbout -like "https://dot.net/core"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSDotNetFrameworkV) {
+            $MSDotNetFrameworkV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Windows Desktop Runtime*" -and $_.URLInfoAbout -like "https://dot.net/core"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSDotNetFrameworkChannelClear channel $MSDotNetFrameworkArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSDotNetFrameworkChannelClear channel $MSDotNetFrameworkArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSDotNetFrameworkV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSDotNetFrameworkV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSDotNetFrameworkV -lt $Version) {
+            If (!$MSDotNetFrameworkV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MS365Apps -eq 1) {
+        $Product = "Microsoft 365 Apps"
+        $MS365AppsD = Get-EvergreenApp -Name Microsoft365Apps | Where-Object {$_.Channel -eq "$MS365AppsChannelClearDL"}
+        $Version = $MS365AppsD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\$MS365AppsChannelClear\Version.txt" -EA SilentlyContinue
+        $MS365AppsV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Microsoft 365*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MS365AppsV) {
+            $MS365AppsV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Microsoft 365*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MS365AppsChannelClear setup file"
+        Add-Content -Path "$ReportFile" -Value "$Product $MS365AppsChannelClear setup file"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MS365AppsV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MS365AppsV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MS365AppsV -lt $Version) {
+            If (!$MS365AppsV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSAVDRemoteDesktop -eq 1) {
+        $Product = "Microsoft AVD Remote Desktop"
+        $MSAVDRemoteDesktopD = Get-EvergreenApp -Name MicrosoftWVDRemoteDesktop -WarningAction:SilentlyContinue | Where-Object { $_.Architecture -eq "$MSAVDRemoteDesktopArchitectureClear" -and $_.Channel -eq "$MSAVDRemoteDesktopChannelClear" }
+        $Version = $MSAVDRemoteDesktopD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSAVDRemoteDesktopChannelClear" + "$MSAVDRemoteDesktopArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -ErrorAction SilentlyContinue
+        $MSAVDRemoteDesktopV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Remotedesktop"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSAVDRemoteDesktopV) {
+            $MSAVDRemoteDesktopV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Remotedesktop"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSAVDRemoteDesktopChannelClear release $MSAVDRemoteDesktopArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSAVDRemoteDesktopChannelClear release $MSAVDRemoteDesktopArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSAVDRemoteDesktopV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSAVDRemoteDesktopV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSAVDRemoteDesktopV -lt $Version) {
+            If (!$MSAVDRemoteDesktopV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSAzureCLI -eq 1) {
+        $Product = "Microsoft Azure CLI"
+        $MSAzureCLID = Get-NevergreenApp -Name MicrosoftAzureCLI | Where-Object { $_.Type -eq "Msi" }
+        $Version = $MSAzureCLID.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSAzureCLIV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Azure CLI"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSAzureCLIV) {
+            $MSAzureCLIV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Azure CLI"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSAzureCLIV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSAzureCLIV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSAzureCLIV -lt $Version) {
+            If (!$MSAzureCLIV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSAzureDataStudio -eq 1) {
+        $Product = "Microsoft Azure Data Studio"
+        $MSAzureDataStudioD = Get-EvergreenApp -Name microsoftazuredatastudio | Where-Object { $_.Channel -eq "$MSAzureDataStudioChannelClear" -and $_.Platform -eq "$MSAzureDataStudioPlatformClear"}
+        $Version = $MSAzureDataStudioD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSAzureDataStudioChannelClear" + "-$MSAzureDataStudioPlatformClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSAzureDataStudioV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Azure Data Studio*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSAzureDataStudioV) {
+            $MSAzureDataStudioV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Azure Data Studio*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If (!$MSAzureDataStudioV) {
+            $MSAzureDataStudioV = (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Azure Data Studio*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSAzureDataStudioChannelClear $MSAzureDataStudioArchitectureClear $MSAzureDataStudioModeClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSAzureDataStudioChannelClear $MSAzureDataStudioArchitectureClear $MSAzureDataStudioModeClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSAzureDataStudioV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSAzureDataStudioV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSAzureDataStudioV -lt $Version) {
+            If (!$MSAzureDataStudioV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSEdge -eq 1) {
+        $Product = "Microsoft Edge"
+        $EdgeD = Get-EvergreenApp -Name MicrosoftEdge | Where-Object { $_.Platform -eq "Windows" -and $_.Release -eq "Consumer" -and $_.Channel -eq "$MSEdgeChannelClear" -and $_.Architecture -eq "$MSEdgeArchitectureClear" }
+        $Version = $EdgeD.Version
+        $EdgeSplit = $Version.split(".")
+        $EdgeStrings = ([regex]::Matches($Version, "\." )).count
+        $EdgeStringLast = ([regex]::Matches($EdgeSplit[$EdgeStrings], "." )).count
+        $EdgeStringFirst = ([regex]::Matches($EdgeSplit[0], "." )).count
+        If ($EdgeStringLast -lt "3") {
+            $EdgeSplit[$EdgeStrings] = "0" + $EdgeSplit[$EdgeStrings]
+        }
+        If ($EdgeStringFirst -lt "3") {
+            $EdgeSplit[0] = "0" + $EdgeSplit[0]
+        }
+        Switch ($EdgeStrings) {
+            1 {
+                $NewVersion = $EdgeSplit[0] + "." + $EdgeSplit[1]
+            }
+            2 {
+                $NewVersion = $EdgeSplit[0] + "." + $EdgeSplit[1] + "." + $EdgeSplit[2]
+            }
+            3 {
+                $NewVersion = $EdgeSplit[0] + "." + $EdgeSplit[1] + "." + $EdgeSplit[2] + "." + $EdgeSplit[3]
+            }
+        }
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSEdgeArchitectureClear" + "_$MSEdgeChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $NewCurrentVersion = ""
+        If ($CurrentVersion) {
+            $CurrentEdgeSplit = $CurrentVersion.split(".")
+            $CurrentEdgeStrings = ([regex]::Matches($CurrentVersion, "\." )).count
+            $CurrentEdgeStringLast = ([regex]::Matches($CurrentEdgeSplit[$CurrentEdgeStrings], "." )).count
+            $CurrentEdgeStringFirst = ([regex]::Matches($CurrentEdgeSplit[0], "." )).count
+            If ($CurrentEdgeStringLast -lt "3") {
+                $CurrentEdgeSplit[$CurrentEdgeStrings] = "0" + $CurrentEdgeSplit[$CurrentEdgeStrings]
+            }
+            If ($CurrentEdgeStringFirst -lt "3") {
+                $CurrentEdgeSplit[0] = "0" + $CurrentEdgeSplit[0]
+            }
+            Switch ($CurrentEdgeStrings) {
+                1 {
+                    $NewCurrentVersion = $CurrentEdgeSplit[0] + "." + $CurrentEdgeSplit[1]
+                }
+                2 {
+                    $NewCurrentVersion = $CurrentEdgeSplit[0] + "." + $CurrentEdgeSplit[1] + "." + $CurrentEdgeSplit[2]
+                }
+                3 {
+                    $NewCurrentVersion = $CurrentEdgeSplit[0] + "." + $CurrentEdgeSplit[1] + "." + $CurrentEdgeSplit[2] + "." + $CurrentEdgeSplit[3]
+                }
+            }
+        }
+        If ($MSEdgeChannelClear -eq "Stable") {
+            $Edge = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Edge"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$Edge) {
+                $Edge = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Edge"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($MSEdgeChannelClear -eq "Dev") {
+            $Edge = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Edge Dev"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$Edge) {
+                $Edge = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Edge Dev"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($MSEdgeChannelClear -eq "Beta") {
+            $Edge = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Edge Beta"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$Edge) {
+                $Edge = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft Edge Beta"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+        }
+        If ($Edge) {
+            $CurrentEdgeSplit1 = $Edge.split(".")
+            $CurrentEdgeStrings1 = ([regex]::Matches($Edge, "\." )).count
+            $CurrentEdgeStringLast1 = ([regex]::Matches($CurrentEdgeSplit1[$CurrentEdgeStrings1], "." )).count
+            $CurrentEdgeStringFirst1 = ([regex]::Matches($CurrentEdgeSplit1[0], "." )).count
+            If ($CurrentEdgeStringLast1 -lt "3") {
+                $CurrentEdgeSplit1[$CurrentEdgeStrings1] = "0" + $CurrentEdgeSplit1[$CurrentEdgeStrings1]
+            }
+            If ($CurrentEdgeStringFirst1 -lt "3") {
+                $CurrentEdgeSplit1[0] = "0" + $CurrentEdgeSplit1[0]
+            }
+            Switch ($CurrentEdgeStrings1) {
+                1 {
+                    $NewCurrentVersion1 = $CurrentEdgeSplit1[0] + "." + $CurrentEdgeSplit1[1]
+                }
+                2 {
+                    $NewCurrentVersion1 = $CurrentEdgeSplit1[0] + "." + $CurrentEdgeSplit1[1] + "." + $CurrentEdgeSplit1[2]
+                }
+                3 {
+                    $NewCurrentVersion1 = $CurrentEdgeSplit1[0] + "." + $CurrentEdgeSplit1[1] + "." + $CurrentEdgeSplit1[2] + "." + $CurrentEdgeSplit1[3]
+                }
+            }
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSEdgeChannelClear channel $MSEdgeArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSEdgeChannelClear channel $MSEdgeArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $NewVersion"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $NewVersion"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $NewCurrentVersion1"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $NewCurrentVersion1"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($NewCurrentVersion -lt $NewVersion) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($NewCurrentVersion1 -lt $NewVersion) {
+            If (!$NewCurrentVersion1) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSEdgeWebView2 -eq 1) {
+        $Product = "Microsoft Edge WebView2"
+        $EdgeWebView2D = Get-EvergreenApp -Name MicrosoftEdgeWebView2Runtime | Where-Object { $_.Architecture -eq "$MSEdgeWebView2ArchitectureClear" }
+        $Version = $EdgeWebView2D.Version
+        $EdgeWebView2Split = $Version.split(".")
+        $EdgeWebView2Strings = ([regex]::Matches($Version, "\." )).count
+        $EdgeWebView2StringLast = ([regex]::Matches($EdgeWebView2Split[$EdgeWebView2Strings], "." )).count
+        If ($EdgeWebView2StringLast -lt "3") {
+            $EdgeWebView2Split[$EdgeWebView2Strings] = "0" + $EdgeWebView2Split[$EdgeWebView2Strings]
+        }
+        Switch ($EdgeWebView2Strings) {
+            1 {
+                $NewVersion = $EdgeWebView2Split[0] + "." + $EdgeWebView2Split[1]
+            }
+            2 {
+                $NewVersion = $EdgeWebView2Split[0] + "." + $EdgeWebView2Split[1] + "." + $EdgeWebView2Split[2]
+            }
+            3 {
+                $NewVersion = $EdgeWebView2Split[0] + "." + $EdgeWebView2Split[1] + "." + $EdgeWebView2Split[2] + "." + $EdgeWebView2Split[3]
+            }
+        }
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSEdgeWebView2ArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $NewCurrentVersion = ""
+        If ($CurrentVersion) {
+            $CurrentEdgeWebView2Split = $CurrentVersion.split(".")
+            $CurrentEdgeWebView2Strings = ([regex]::Matches($CurrentVersion, "\." )).count
+            $CurrentEdgeWebView2StringLast = ([regex]::Matches($CurrentEdgeWebView2Split[$CurrentEdgeWebView2Strings], "." )).count
+            $CurrentEdgeWebView2StringFirst = ([regex]::Matches($CurrentEdgeWebView2Split[0], "." )).count
+            If ($CurrentEdgeWebView2StringLast -lt "3") {
+                $CurrentEdgeWebView2Split[$CurrentEdgeWebView2Strings] = "0" + $CurrentEdgeWebView2Split[$CurrentEdgeWebView2Strings]
+            }
+            If ($CurrentEdgeWebView2StringFirst -lt "3") {
+                $CurrentEdgeWebView2Split[0] = "0" + $CurrentEdgeWebView2Split[0]
+            }
+            Switch ($CurrentEdgeWebView2Strings) {
+                1 {
+                    $NewCurrentVersion = $CurrentEdgeWebView2Split[0] + "." + $CurrentEdgeWebView2Split[1]
+                }
+                2 {
+                    $NewCurrentVersion = $CurrentEdgeWebView2Split[0] + "." + $CurrentEdgeWebView2Split[1] + "." + $CurrentEdgeWebView2Split[2]
+                }
+                3 {
+                    $NewCurrentVersion = $CurrentEdgeWebView2Split[0] + "." + $CurrentEdgeWebView2Split[1] + "." + $CurrentEdgeWebView2Split[2] + "." + $CurrentEdgeWebView2Split[3]
+                }
+            }
+        }
+        $EdgeWebView2 = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Edge WebView2*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$EdgeWebView2) {
+            $EdgeWebView2 = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Edge WebView2*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($EdgeWebView2) {
+            $CurrentEdgeWebView2Split1 = $EdgeWebView2.split(".")
+            $CurrentEdgeWebView2Strings1 = ([regex]::Matches($EdgeWebView2, "\." )).count
+            $CurrentEdgeWebView2StringLast1 = ([regex]::Matches($CurrentEdgeWebView2Split1[$CurrentEdgeWebView2Strings1], "." )).count
+            $CurrentEdgeWebView2StringFirst1 = ([regex]::Matches($CurrentEdgeWebView2Split1[0], "." )).count
+            If ($CurrentEdgeWebView2StringLast1 -lt "3") {
+                $CurrentEdgeWebView2Split1[$CurrentEdgeWebView2Strings1] = "0" + $CurrentEdgeWebView2Split1[$CurrentEdgeWebView2Strings1]
+            }
+            If ($CurrentEdgeWebView2StringFirst1 -lt "3") {
+                $CurrentEdgeWebView2Split1[0] = "0" + $CurrentEdgeWebView2Split1[0]
+            }
+            Switch ($CurrentEdgeWebView2Strings1) {
+                1 {
+                    $NewCurrentVersion1 = $CurrentEdgeWebView2Split1[0] + "." + $CurrentEdgeWebView2Split1[1]
+                }
+                2 {
+                    $NewCurrentVersion1 = $CurrentEdgeWebView2Split1[0] + "." + $CurrentEdgeWebView2Split1[1] + "." + $CurrentEdgeWebView2Split1[2]
+                }
+                3 {
+                    $NewCurrentVersion1 = $CurrentEdgeWebView2Split1[0] + "." + $CurrentEdgeWebView2Split1[1] + "." + $CurrentEdgeWebView2Split1[2] + "." + $CurrentEdgeWebView2Split1[3]
+                }
+            }
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSEdgeWebView2ArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSEdgeWebView2ArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $NewVersion"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $NewVersion"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $NewCurrentVersion1"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $NewCurrentVersion1"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $NewVersion) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($NewCurrentVersion1 -lt $NewVersion) {
+            If (!$NewCurrentVersion1) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSFSLogix -eq 1) {
+        $Product = "Microsoft FSLogix"
+        If ($MSFSLogixChannelClear -eq "Stable") {
+            $MSFSLogixD = Get-MSFSLogix
+        } else {
+            $MSFSLogixD = Get-EvergreenApp -Name MicrosoftFSLogixApps -ea silentlyContinue -WarningAction silentlyContinue | Where-Object { $_.Channel -eq "$MSFSLogixChannelClear"}
+            If (!($MSFSLogixD.uri)) {
+                $MSFSLogixD = Get-EvergreenApp -Name MicrosoftFSLogixApps -ea silentlyContinue -WarningAction silentlyContinue | Where-Object { $_.Channel -eq "Production"}
+            }
+        }
+        $Version = $MSFSLogixD.Version
+        $VersionPath = "$PSScriptRoot\$Product\$MSFSLogixChannelClear\Version_"+ "$MSFSLogixChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSFSLogixV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft FSLogix Apps"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSFSLogixV) {
+            $MSFSLogixV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Microsoft FSLogix Apps"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSFSLogixChannelClear release $MSFSLogixArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSFSLogixChannelClear release $MSFSLogixArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSFSLogixV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSFSLogixV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSFSLogixV -lt $Version) {
+            If (!$MSFSLogixV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSOffice -eq 1) {
+        $Product = "Microsoft Office " + $MSOfficeChannelClear
+        $MSOfficeD = Get-EvergreenApp -Name Microsoft365Apps | Where-Object {$_.Channel -eq "$MSOfficeVersionClear"}
+        $Version = $MSOfficeD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $MSOfficeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Microsoft Office*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSOfficeV) {
+            $MSOfficeV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Microsoft Office*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSOfficeV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSOfficeV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSOfficeV -lt $Version) {
+            If (!$MSOfficeV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSOneDrive -eq 1) {
+        $Product = "Microsoft OneDrive"
+        $MSOneDriveD = Get-EvergreenApp -Name MicrosoftOneDrive | Where-Object { $_.Ring -eq "$MSOneDriveRingClear" -and $_.Type -eq "Exe" -and $_.Architecture -eq "$MSOneDriveArchitectureClear"} | Sort-Object -Property Version -Descending | Select-Object -Last 1
+        $Version = $MSOneDriveD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSOneDriveRingClear" + "_$MSOneDriveArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSOneDriveV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OneDrive*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSOneDriveV) {
+            $MSOneDriveV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OneDrive*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If (!$MSOneDriveV) {
+            $MSOneDriveV = (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OneDrive*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSOneDriveRingClear ring $MSOneDriveArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSOneDriveRingClear ring $MSOneDriveArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSOneDriveV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSOneDriveV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSOneDriveV -lt $Version) {
+            If (!$MSOneDriveV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSPowerBIDesktop -eq 1) {
+        $Product = "Microsoft Power BI Desktop"
+        $MSPowerBIDesktopD = Get-NevergreenApp -Name MicrosoftPowerBIDesktop | Where-Object { $_.Architecture -eq "$MSPowerBIDesktopArchitectureClear"}
+        $Version = $MSPowerBIDesktopD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSPowerBIDesktopArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $CurrentPowerSplit = $CurrentVersion.split(".")
+        $CurrentPowerStrings = ([regex]::Matches($CurrentVersion, "\." )).count
+        $CurrentPowerStringSecond = ([regex]::Matches($CurrentPowerSplit[1], "." )).count
+        $CurrentPowerStringThird = ([regex]::Matches($CurrentPowerSplit[2], "." )).count
+        Switch ($CurrentPowerStringSecond) {
+            2 {
+                $CurrentPowerSplit[1] = "0" + $CurrentPowerSplit[1]
+            }
+        }
+        Switch ($CurrentPowerStringThird) {
+            3 {
+                $CurrentPowerSplit[2] = "0" + $CurrentPowerSplit[2]
+            }
+        }
+        Switch ($CurrentPowerStrings) {
+            1 {
+                $NewCurrentVersion = $CurrentPowerSplit[0] + "." + $CurrentPowerSplit[1]
+            }
+            2 {
+                $NewCurrentVersion = $CurrentPowerSplit[0] + "." + $CurrentPowerSplit[1] + "." + $CurrentPowerSplit[2]
+            }
+            3 {
+                $NewCurrentVersion = $CurrentPowerSplit[0] + "." + $CurrentPowerSplit[1] + "." + $CurrentPowerSplit[2] + "." + $CurrentPowerSplit[3]
+            }
+        }
+        $PowerSplit = $Version.split(".")
+        $PowerStrings = ([regex]::Matches($Version, "\." )).count
+        $PowerStringSecond = ([regex]::Matches($PowerSplit[1], "." )).count
+        $PowerStringThird = ([regex]::Matches($PowerSplit[2], "." )).count
+        Switch ($PowerStringSecond) {
+            2 {
+                $PowerSplit[1] = "0" + $PowerSplit[1]
+            }
+        }
+        Switch ($PowerStringThird) {
+            3 {
+                $PowerSplit[2] = "0" + $PowerSplit[2]
+            }
+        }
+        Switch ($PowerStrings) {
+            1 {
+                $NewVersion = $PowerSplit[0] + "." + $PowerSplit[1]
+            }
+            2 {
+                $NewVersion = $PowerSplit[0] + "." + $PowerSplit[1] + "." + $PowerSplit[2]
+            }
+            3 {
+                $NewVersion = $PowerSplit[0] + "." + $PowerSplit[1] + "." + $PowerSplit[2] + "." + $PowerSplit[3]
+            }
+        }
+        $MSPowerBIDesktopV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft PowerBI Desktop*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSPowerBIDesktopV) {
+            $MSPowerBIDesktopV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft PowerBI Desktop*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSPowerBIDesktopArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSPowerBIDesktopArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $NewVersion"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $NewVersion"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $MSPowerBIDesktopV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSPowerBIDesktopV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($NewCurrentVersion -lt $NewVersion) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSPowerBIDesktopV -lt $NewVersion) {
+            If (!$MSPowerBIDesktopV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSPowerBIReportBuilder -eq 1) {
+        $Product = "Microsoft Power BI Report Builder"
+        $MSPowerBIReportBuilderD = Get-NevergreenApp -Name MicrosoftPowerBIReportBuilder
+        $Version = $MSPowerBIReportBuilderD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $CurrentPowerBISplit = $CurrentVersion.split(".")
+        $CurrentPowerBIStrings = ([regex]::Matches($CurrentVersion, "\." )).count
+        $CurrentPowerBIStringSecond = ([regex]::Matches($CurrentPowerBISplit[2], "." )).count
+        Switch ($CurrentPowerBIStringSecond) {
+            4 {
+                $CurrentPowerBISplit[2] = "0" + $CurrentPowerBISplit[2]
+            }
+        }
+        Switch ($CurrentPowerBIStrings) {
+            1 {
+                $NewCurrentVersion = $CurrentPowerBISplit[0] + "." + $CurrentPowerBISplit[1]
+            }
+            2 {
+                $NewCurrentVersion = $CurrentPowerBISplit[0] + "." + $CurrentPowerBISplit[1] + "." + $CurrentPowerBISplit[2]
+            }
+            3 {
+                $NewCurrentVersion = $CurrentPowerBISplit[0] + "." + $CurrentPowerBISplit[1] + "." + $CurrentPowerBISplit[2] + "." + $CurrentPowerBISplit[3]
+            }
+        }
+        $PowerBISplit = $Version.split(".")
+        $PowerBIStrings = ([regex]::Matches($Version, "\." )).count
+        $PowerBIStringSecond = ([regex]::Matches($PowerBISplit[2], "." )).count
+        Switch ($PowerBIStringSecond) {
+            4 {
+                $PowerBISplit[2] = "0" + $PowerBISplit[2]
+            }
+        }
+        Switch ($PowerBIStrings) {
+            1 {
+                $NewVersion = $PowerBISplit[0] + "." + $PowerBISplit[1]
+            }
+            2 {
+                $NewVersion = $PowerBISplit[0] + "." + $PowerBISplit[1] + "." + $PowerBISplit[2]
+            }
+            3 {
+                $NewVersion = $PowerBISplit[0] + "." + $PowerBISplit[1] + "." + $PowerBISplit[2] + "." + $PowerBISplit[3]
+            }
+        }
+        $MSPowerBIReportBuilderV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Power BI Report Builder*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSPowerBIReportBuilderV) {
+            $MSPowerBIReportBuilderV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Power BI Report Builder*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $NewVersion"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $NewVersion"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $MSPowerBIReportBuilderV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSPowerBIReportBuilderV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($NewCurrentVersion -lt $NewVersion) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSPowerBIReportBuilderV -lt $NewVersion) {
+            If (!$MSPowerBIReportBuilderV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSPowerShell -eq 1) {
+        $Product = "Microsoft PowerShell"
+        $MSPowershellD = Get-EvergreenApp -Name MicrosoftPowerShell -WarningAction SilentlyContinue | Where-Object {$_.Architecture -eq "$MSPowerShellArchitectureClear" -and $_.Release -eq "$MSPowerShellReleaseClear"} | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!($MSPowershellD)) {
+            $MSPowershellD = Get-EvergreenApp -Name MicrosoftPowerShell -WarningAction SilentlyContinue | Where-Object {$_.Architecture -eq "$MSPowerShellArchitectureClear" -and $_.Release -eq "Stable"} | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        $Version = $MSPowershellD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSPowerShellArchitectureClear" + "_$MSPowerShellReleaseClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -ErrorAction SilentlyContinue
+        $MSOneDriveV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OneDrive*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        $MSPowerShellV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PowerShell*" -and $_.Publisher -like "Microsoft Corporation"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSPowerShellV) {
+            $MSPowerShellV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PowerShell*" -and $_.Publisher -like "Microsoft Corporation"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($MSPowerShellV) {$MSPowerShellV = $MSPowerShellV -replace ".{2}$"}
+        Write-Host -ForegroundColor Magenta "$Product $MSPowerShellReleaseClear Release  $MSPowerShellArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSPowerShellReleaseClear Release  $MSPowerShellArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSPowerShellV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSPowerShellV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSPowerShellV -lt $Version) {
+            If (!$MSPowerShellV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSPowerToys -eq 1) {
+        $Product = "Microsoft PowerToys"
+        $MSPowerToysD = Get-EvergreenApp -Name MicrosoftPowerToys| Where-Object {$_.Architecture -eq "x64"}
+        $Version = $MSPowerToysD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSPowerToysV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PowerToys*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSPowerToysV) {
+            $MSPowerToysV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PowerToys*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSPowerToysV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSPowerToysV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSPowerToysV -lt $Version) {
+            If (!$MSPowerToysV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSSQLServerManagementStudio -eq 1) {
+        $Product = "Microsoft SQL Server Management Studio"
+        $MSSQLServerManagementStudioD = Get-EvergreenApp -Name MicrosoftSsms -ea silentlyContinue -WarningAction silentlyContinue | Where-Object { $_.Language -eq "$MSSQLServerManagementStudioLanguageClear" }
+        $Version = $MSSQLServerManagementStudioD.Version
+        If ($Version) {
+            $VersionSplit = $Version.split(".")
+            $VersionSplit2 = $VersionSplit[2].Substring(0,3)
+            $Version = $VersionSplit[0] + "." + $VersionSplit[1] + "." + $VersionSplit2
+        }
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSSQLServerManagementStudioLanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        If ($CurrentVersion) {
+            $VersionSplit = $CurrentVersion.split(".")
+            $VersionSplit2 = $VersionSplit[2].Substring(0,3)
+            $CurrentVersion = $VersionSplit[0] + "." + $VersionSplit[1] + "." + $VersionSplit2
+        }
+        $MSSQLServerManagementStudioV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*SQL Server Management Studio*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSSQLServerManagementStudioV) {
+            $MSSQLServerManagementStudioV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*SQL Server Management Studio*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($MSSQLServerManagementStudioV) {
+            $MSSQLServerManagementStudioVSplit = $MSSQLServerManagementStudioV.split(".")
+            $MSSQLServerManagementStudioVSplit2 = $MSSQLServerManagementStudioVSplit[2].Substring(0,3)
+            $MSSQLServerManagementStudioV = $MSSQLServerManagementStudioVSplit[0] + "." + $MSSQLServerManagementStudioVSplit[1] + "." + $MSSQLServerManagementStudioVSplit2
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSSQLServerManagementStudioLanguageClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSSQLServerManagementStudioLanguageClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSSQLServerManagementStudioV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSSQLServerManagementStudioV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSSQLServerManagementStudioV -lt $Version) {
+            If (!$MSSQLServerManagementStudioV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSSysinternals -eq 1) {
+        $Product = "Microsoft Sysinternals"
+        $MSSysinternalsD = Get-NevergreenApp -Name MicrosoftSysinternals | Where-Object { $_.Type -eq "Zip" -and $_.Architecture -eq "Multi" -and $_.Name -eq "Microsoft Sysinternals Suite" }
+        $Version = $MSSysinternalsD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+If ($MSTeams -eq 1) {
+        If ($MSTeamsInstallerClear -eq 'Machine Based') {
+            $Product = "Microsoft Teams Machine Based"
+            If ($MSTeamsRingClear -eq 'Continuous Deployment' -or $MSTeamsRingClear -eq 'Exploration') {
+                $TeamsD = Get-NevergreenApp -Name MicrosoftTeams | Where-Object { $_.Architecture -eq "$MSTeamsArchitectureClear" -and $_.Ring -eq "$MSTeamsRingClear" -and $_.Type -eq "MSI"}
+            }
+            Else {
+                $TeamsD = Get-EvergreenApp -Name MicrosoftTeams | Where-Object { $_.Architecture -eq "$MSTeamsArchitectureClear" -and $_.Ring -eq "$MSTeamsRingClear" -and $_.Type -eq "MSI"}
+            }
+            $Version = $TeamsD.Version
+            If ($Version) {
+                $TeamsSplit = $Version.split(".")
+                $TeamsStrings = ([regex]::Matches($Version, "\." )).count
+                $TeamsStringLast = ([regex]::Matches($TeamsSplit[$TeamsStrings], "." )).count
+                If ($TeamsStringLast -lt "5") {
+                    $TeamsSplit[$TeamsStrings] = "0" + $TeamsSplit[$TeamsStrings]
+                }
+                $NewVersion = $TeamsSplit[0] + "." + $TeamsSplit[1] + "." + $TeamsSplit[2] + "." + $TeamsSplit[3]
+            }
+            $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSTeamsArchitectureClear" + "_$MSTeamsRingClear" + ".txt"
+            $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+            If ($CurrentVersion) {
+                $CurrentTeamsSplit = $CurrentVersion.split(".")
+                $CurrentTeamsStrings = ([regex]::Matches($CurrentVersion, "\." )).count
+                $CurrentTeamsStringLast = ([regex]::Matches($CurrentTeamsSplit[$CurrentTeamsStrings], "." )).count
+                If ($CurrentTeamsStringLast -lt "5") {
+                    $CurrentTeamsSplit[$CurrentTeamsStrings] = "0" + $CurrentTeamsSplit[$CurrentTeamsStrings]
+                }
+                $NewCurrentVersion = $CurrentTeamsSplit[0] + "." + $CurrentTeamsSplit[1] + "." + $CurrentTeamsSplit[2] + "." + $CurrentTeamsSplit[3]
+            }
+            If (Test-Path -Path "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\") {
+                $Teams = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Teams Machine*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            If (!$Teams) {
+                If (Test-Path -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\") {
+                    $Teams = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Teams Machine*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+            }
+        }
+        If ($MSTeamsInstallerClear -eq 'User Based') {
+            $Product = "Microsoft Teams User Based"
+            $TeamsD = Get-MicrosoftTeamsUser | Where-Object { $_.Architecture -eq "$MSTeamsArchitectureClear" -and $_.Ring -eq "$MSTeamsRingClear"}
+            $NewVersion = $TeamsD.Version
+            $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSTeamsArchitectureClear" + "_$MSTeamsRingClear" + ".txt"
+            $NewCurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+            If (Test-Path -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\") {
+                $Teams = (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Microsoft Teams*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            If (!$Teams) {
+                If (Test-Path -Path "HKCU:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\") {
+                    $Teams = (Get-ItemProperty HKCU:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Microsoft Teams*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+            }
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSTeamsRingClear ring $MSTeamsArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSTeamsRingClear ring $MSTeamsArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $NewVersion"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $NewVersion"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $Teams"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $Teams"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($NewCurrentVersion -lt $NewVersion) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($Teams -lt $Version) {
+            If (!$Teams) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSVisualCPlusPlusRuntime -eq 1) {
+        $Product = "Microsoft Visual C++ Runtime"
+        If ($MSVisualCPlusPlusRuntime_Architecture -eq 3) {
+            $MSVisualCPlusPlusRuntimeArchitectureClear = "x64"
+            $MSVisualCPlusPlusRuntimeArchitecture2Clear = "x86"
+        }
+        If ($MSVisualCPlusPlusRuntimeRelease -ne 3) {
+			$MSVisualCPlusPlusRuntimeD = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitectureClear" -and $_.Release -eq "$MSVisualCPlusPlusRuntimeReleaseClear"}
+			$Version = $MSVisualCPlusPlusRuntimeD.Version
+			$VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSVisualCPlusPlusRuntimeReleaseClear" + "_$MSVisualCPlusPlusRuntimeArchitectureClear" + ".txt"
+			$CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+			$MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+			If (!$MSVisualCPlusPlusRuntimeV) {
+				$MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+			}
+			If (!$MSVisualCPlusPlusRuntimeV) {
+				$MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).DisplayVersion | Sort-Object -Property DisplayVersion -Descending | Select-Object -First 1
+			}
+			If (!$MSVisualCPlusPlusRuntimeV) {
+				$MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).DisplayVersion | Sort-Object -Property DisplayVersion -Descending | Select-Object -First 1
+			}
+			Write-Host -ForegroundColor Magenta "$Product release $MSVisualCPlusPlusRuntimeReleaseClear $MSVisualCPlusPlusRuntimeArchitectureClear"
+			Add-Content -Path "$ReportFile" -Value "$Product release $MSVisualCPlusPlusRuntimeReleaseClear $MSVisualCPlusPlusRuntimeArchitectureClear"
+			Add-Content -Path "$ReportFile" -Value ""
+			Write-Host "Internet Version:   $Version"
+			Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+			Write-Host "Downloaded Version: $CurrentVersion"
+			Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+			Write-Host "Installed Version:  $MSVisualCPlusPlusRuntimeV"
+			Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntimeV"
+			Add-Content -Path "$ReportFile" -Value ""
+			If ($CurrentVersion -lt $Version) {
+				Write-Host -ForegroundColor Yellow "New version available in the internet"
+				Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+				Write-Output ""
+				Add-Content -Path "$ReportFile" -Value ""
+			} Else {
+				Write-Host -ForegroundColor Green "No new version available in the internet"
+				Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+				Write-Output ""
+				Add-Content -Path "$ReportFile" -Value ""
+			}
+			If ($MSVisualCPlusPlusRuntimeV -lt $Version) {
+				If (!$MSVisualCPlusPlusRuntimeV) {
+					Write-Host -ForegroundColor Cyan "No installed version found"
+					Add-Content -Path "$ReportFile" -Value "No installed version found"
+					Write-Output ""
+					Add-Content -Path "$ReportFile" -Value ""
+				} Else {
+					Write-Host -ForegroundColor Yellow "Update available for installed version"
+					Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+					Write-Output ""
+					Add-Content -Path "$ReportFile" -Value ""
+				}
+			} Else {
+				Write-Host -ForegroundColor Green "No update available for installed version"
+				Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+				Write-Output ""
+				Add-Content -Path "$ReportFile" -Value ""
+			}
+            If ($MSVisualCPlusPlusRuntime_Architecture -eq 3) {
+                $MSVisualCPlusPlusRuntimeD = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitecture2Clear" -and $_.Release -eq "$MSVisualCPlusPlusRuntimeReleaseClear"}
+                $Version = $MSVisualCPlusPlusRuntimeD.Version
+                $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSVisualCPlusPlusRuntimeReleaseClear" + "_$MSVisualCPlusPlusRuntimeArchitecture2Clear" + ".txt"
+                $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+                $MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitecture2Clear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+                If (!$MSVisualCPlusPlusRuntimeV) {
+                    $MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitecture2Clear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+                }
+                If (!$MSVisualCPlusPlusRuntimeV) {
+                    $MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitecture2Clear*"}).DisplayVersion | Sort-Object -Property DisplayVersion -Descending | Select-Object -First 1
+                }
+                If (!$MSVisualCPlusPlusRuntimeV) {
+                    $MSVisualCPlusPlusRuntimeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *$MSVisualCPlusPlusRuntimeReleaseClear*$MSVisualCPlusPlusRuntimeArchitecture2Clear*"}).DisplayVersion | Sort-Object -Property DisplayVersion -Descending | Select-Object -First 1
+                }
+				Write-Host -ForegroundColor Magenta "$Product release $MSVisualCPlusPlusRuntimeReleaseClear $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+				Add-Content -Path "$ReportFile" -Value "$Product release $MSVisualCPlusPlusRuntimeReleaseClear $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+				Add-Content -Path "$ReportFile" -Value ""
+				Write-Host "Internet Version:   $Version"
+				Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+				Write-Host "Downloaded Version: $CurrentVersion"
+				Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+				Write-Host "Installed Version:  $MSVisualCPlusPlusRuntimeV"
+				Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntimeV"
+				Add-Content -Path "$ReportFile" -Value ""
+				If ($CurrentVersion -lt $Version) {
+					Write-Host -ForegroundColor Yellow "New version available in the internet"
+					Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+					Write-Output ""
+					Add-Content -Path "$ReportFile" -Value ""
+				} Else {
+					Write-Host -ForegroundColor Green "No new version available in the internet"
+					Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+					Write-Output ""
+					Add-Content -Path "$ReportFile" -Value ""
+				}
+				If ($MSVisualCPlusPlusRuntimeV -lt $Version) {
+					If (!$MSVisualCPlusPlusRuntimeV) {
+						Write-Host -ForegroundColor Cyan "No installed version found"
+						Add-Content -Path "$ReportFile" -Value "No installed version found"
+						Write-Output ""
+						Add-Content -Path "$ReportFile" -Value ""
+					} Else {
+						Write-Host -ForegroundColor Yellow "Update available for installed version"
+						Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+						Write-Output ""
+						Add-Content -Path "$ReportFile" -Value ""
+					}
+				} Else {
+					Write-Host -ForegroundColor Green "No update available for installed version"
+					Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+					Write-Output ""
+					Add-Content -Path "$ReportFile" -Value ""
+				}
+			}
+        } Else {
+            $MSVisualCPlusPlusRuntime2022D = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitectureClear" -and $_.Release -eq "2022"}
+            $MSVisualCPlusPlusRuntime2012D = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitectureClear" -and $_.Release -eq "2012"}
+            $MSVisualCPlusPlusRuntime2013D = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitectureClear" -and $_.Release -eq "2013"}
+            $Version2022 = $MSVisualCPlusPlusRuntime2022D.Version
+            $Version2012 = $MSVisualCPlusPlusRuntime2012D.Version
+            $Version2013 = $MSVisualCPlusPlusRuntime2013D.Version
+            $VersionPath2022 = "$PSScriptRoot\$Product\Version_2022_" + "$MSVisualCPlusPlusRuntimeArchitectureClear" + ".txt"
+            $CurrentVersion2022 = Get-Content -Path "$VersionPath2022" -EA SilentlyContinue
+            $VersionPath2012 = "$PSScriptRoot\$Product\Version_2012_" + "$MSVisualCPlusPlusRuntimeArchitectureClear" + ".txt"
+            $CurrentVersion2012 = Get-Content -Path "$VersionPath2012" -EA SilentlyContinue
+            $VersionPath2013 = "$PSScriptRoot\$Product\Version_2013_" + "$MSVisualCPlusPlusRuntimeArchitectureClear" + ".txt"
+            $CurrentVersion2013 = Get-Content -Path "$VersionPath2013" -EA SilentlyContinue
+            $MSVisualCPlusPlusRuntime2012V = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *2012*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+            If (!$MSVisualCPlusPlusRuntime2012V) {
+                $MSVisualCPlusPlusRuntime2012V = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *2012*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+            }
+            $MSVisualCPlusPlusRuntime2013V = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *2013*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+            If (!$MSVisualCPlusPlusRuntime2013V) {
+                $MSVisualCPlusPlusRuntime2013V = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *2013*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+            }
+            $MSVisualCPlusPlusRuntime2022V = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *2015*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+            If (!$MSVisualCPlusPlusRuntime2022V) {
+                $MSVisualCPlusPlusRuntime2022V = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft Visual C++ *2015*$MSVisualCPlusPlusRuntimeArchitectureClear*"}).BundleVersion | Sort-Object -Property BundleVersion -Descending | Select-Object -First 1
+            }
+            Write-Host -ForegroundColor Magenta "$Product release 2012 $MSVisualCPlusPlusRuntimeArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value "$Product release 2012 $MSVisualCPlusPlusRuntimeArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version2012"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version2012"
+            Write-Host "Downloaded Version: $CurrentVersion2012"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion2012"
+            Write-Host "Installed Version:  $MSVisualCPlusPlusRuntime2012V"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntime2012V"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion2012 -lt $Version2012) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($MSVisualCPlusPlusRuntime2012V -lt $Version2012) {
+                If (!$MSVisualCPlusPlusRuntime2012V) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            Write-Host -ForegroundColor Magenta "$Product release 2013 $MSVisualCPlusPlusRuntimeArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value "$Product release 2013 $MSVisualCPlusPlusRuntimeArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version2013"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version2013"
+            Write-Host "Downloaded Version: $CurrentVersion2013"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion2013"
+            Write-Host "Installed Version:  $MSVisualCPlusPlusRuntime2013V"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntime2013V"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion2013 -lt $Version2013) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($MSVisualCPlusPlusRuntime2013V -lt $Version2013) {
+                If (!$MSVisualCPlusPlusRuntime2013V) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            Write-Host -ForegroundColor Magenta "$Product release 2022 $MSVisualCPlusPlusRuntimeArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value "$Product release 2022 $MSVisualCPlusPlusRuntimeArchitectureClear"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version2022"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version2022"
+            Write-Host "Downloaded Version: $CurrentVersion2022"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion2022"
+            Write-Host "Installed Version:  $MSVisualCPlusPlusRuntime2022V"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntime2022V"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion2022 -lt $Version2022) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($MSVisualCPlusPlusRuntime2022V -lt $Version2022) {
+                If (!$MSVisualCPlusPlusRuntime2022V) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($MSVisualCPlusPlusRuntime_Architecture -eq 3) {
+                $MSVisualCPlusPlusRuntime2022D = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitecture2Clear" -and $_.Release -eq "2022"}
+                $MSVisualCPlusPlusRuntime2012D = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitecture2Clear" -and $_.Release -eq "2012"}
+                $MSVisualCPlusPlusRuntime2013D = Get-VcList | Where-Object { $_.Architecture -eq "$MSVisualCPlusPlusRuntimeArchitecture2Clear" -and $_.Release -eq "2013"}
+                $Version2022 = $MSVisualCPlusPlusRuntime2022D.Version
+                $Version2012 = $MSVisualCPlusPlusRuntime2012D.Version
+                $Version2013 = $MSVisualCPlusPlusRuntime2013D.Version
+                $VersionPath2022 = "$PSScriptRoot\$Product\Version_2022_" + "$MSVisualCPlusPlusRuntimeArchitecture2Clear" + ".txt"
+                $CurrentVersion2022 = Get-Content -Path "$VersionPath2022" -EA SilentlyContinue
+                $VersionPath2012 = "$PSScriptRoot\$Product\Version_2012_" + "$MSVisualCPlusPlusRuntimeArchitecture2Clear" + ".txt"
+                $CurrentVersion2012 = Get-Content -Path "$VersionPath2012" -EA SilentlyContinue
+                $VersionPath2013 = "$PSScriptRoot\$Product\Version_2013_" + "$MSVisualCPlusPlusRuntimeArchitecture2Clear" + ".txt"
+                $CurrentVersion2013 = Get-Content -Path "$VersionPath2013" -EA SilentlyContinue
+                Write-Host -ForegroundColor Magenta "$Product release 2012 $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+                Add-Content -Path "$ReportFile" -Value "$Product release 2012 $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version2012"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version2012"
+                Write-Host "Downloaded Version: $CurrentVersion2012"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion2012"
+                Write-Host "Installed Version:  $MSVisualCPlusPlusRuntime2012V"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntime2012V"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion2012 -lt $Version2012) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($MSVisualCPlusPlusRuntime2012V -lt $Version2012) {
+                    If (!$MSVisualCPlusPlusRuntime2012V) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                Write-Host -ForegroundColor Magenta "$Product release 2013 $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+                Add-Content -Path "$ReportFile" -Value "$Product release 2013 $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version2013"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version2013"
+                Write-Host "Downloaded Version: $CurrentVersion2013"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion2013"
+                Write-Host "Installed Version:  $MSVisualCPlusPlusRuntime2013V"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntime2013V"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion2013 -lt $Version2013) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($MSVisualCPlusPlusRuntime2013V -lt $Version2013) {
+                    If (!$MSVisualCPlusPlusRuntime2013V) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                Write-Host -ForegroundColor Magenta "$Product release 2022 $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+                Add-Content -Path "$ReportFile" -Value "$Product release 2022 $MSVisualCPlusPlusRuntimeArchitecture2Clear"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version2022"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version2022"
+                Write-Host "Downloaded Version: $CurrentVersion2022"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion2022"
+                Write-Host "Installed Version:  $MSVisualCPlusPlusRuntime2022V"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualCPlusPlusRuntime2022V"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion2022 -lt $Version2022) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($MSVisualCPlusPlusRuntime2022V -lt $Version2022) {
+                    If (!$MSVisualCPlusPlusRuntime2022V) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+        }
+    }
+
+    If ($MSVisualStudio -eq 1) {
+        $Product = "Microsoft Visual Studio 2019"
+        $MSVisualStudioD = Get-EvergreenApp -Name MicrosoftVisualStudio
+        $Version = $MSVisualStudioD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSVisualStudioV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Visual Studio $MSVisualStudioEditionClear*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSVisualStudioV) {
+            $MSVisualStudioV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Visual Studio $MSVisualStudioEditionClear*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSVisualStudioEditionClear edition"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSVisualStudioEditionClear edition"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSVisualStudioV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualStudioV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSVisualStudioV -lt $Version) {
+            If (!$MSVisualStudioV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MSVisualStudioCode -eq 1) {
+        $Product = "Microsoft Visual Studio Code"
+        $MSVisualStudioCodeD = Get-EvergreenApp -Name MicrosoftVisualStudioCode | Where-Object { $_.Architecture -eq "$MSVisualStudioCodeArchitectureClear" -and $_.Channel -eq "$MSVisualStudioCodeChannelClear" -and $_.Platform -eq "$MSVisualStudioCodePlatformClear"}
+        $Version = $MSVisualStudioCodeD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSVisualStudioCodeChannelClear" + "-$MSVisualStudioCodePlatformClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MSVisualStudioCodeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Visual Studio Code*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MSVisualStudioCodeV) {
+            $MSVisualStudioCodeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Visual Studio Code*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If (!$MSVisualStudioCodeV) {
+            $MSVisualStudioCodeV = (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Visual Studio Code*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MSVisualStudioCodeChannelClear channel $MSVisualStudioCodeArchitectureClear $MSVisualStudioCodeModeClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MSVisualStudioCodeChannelClear channel $MSVisualStudioCodeArchitectureClear $MSVisualStudioCodeModeClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MSVisualStudioCodeV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MSVisualStudioCodeV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MSVisualStudioCodeV -lt $Version) {
+            If (!$MSVisualStudioCodeV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MindView7 -eq 1) {
+        $Product = "MindView 7"
+        $MindView7D = Get-MindView7 | Where-Object { $_.Language -eq "$MindView7LanguageClear"}
+        $Version = $MindView7D.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MindView7LanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MindView7V = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*MindView 7*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MindView7V) {
+            $MindView7V = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*MindView 7*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MindView7LanguageClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MindView7LanguageClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MindView7V"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MindView7V"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MindView7V -lt $Version) {
+            If (!$MindView7V) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Firefox -eq 1) {
+        $Product = "Mozilla Firefox"
+        $FirefoxD = Get-EvergreenApp -Name MozillaFirefox -AppParams @{Language="$FFLanguageClear"} -WarningAction silentlyContinue -ErrorAction SilentlyContinue | Where-Object { $_.Type -eq "msi" -and $_.Architecture -eq "$FirefoxArchitectureClear" -and $_.Channel -like "*$FirefoxChannelClear*"} | Sort-Object -Property Version -Descending | Select-Object -First 1
+        $Version = $FirefoxD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$FirefoxChannelClear" + "$FirefoxArchitectureClear" + "$FFLanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $FirefoxSplit = $CurrentVersion.split(".")
+        $FirefoxStrings = ([regex]::Matches($CurrentVersion, "\." )).count
+        $FirefoxStringFirst = ([regex]::Matches($FirefoxSplit[0], "." )).count
+        If ($FirefoxStringFirst -lt "3") {
+            $FirefoxSplit[0] = "0" + $FirefoxSplit[0]
+        }
+        Switch ($FirefoxStrings) {
+            1 {
+                $NewCurrentVersion = $FirefoxSplit[0] + "." + $FirefoxSplit[1]
+            }
+            2 {
+                $NewCurrentVersion = $FirefoxSplit[0] + "." + $FirefoxSplit[1] + "." + $FirefoxSplit[2]
+            }
+            3 {
+                $NewCurrentVersion = $FirefoxSplit[0] + "." + $FirefoxSplit[1] + "." + $FirefoxSplit[2] + "." + $FirefoxSplit[3]
+            }
+        }
+        $FirefoxV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Firefox*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$FirefoxV) {
+            $FirefoxV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Firefox*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $FirefoxChannelClear $FFLanguageLongClear $FirefoxArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $FirefoxChannelClear $FFLanguageLongClear $FirefoxArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $NewCurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $NewCurrentVersion"
+        Write-Host "Installed Version:  $FirefoxV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $FirefoxV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($NewCurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($FirefoxV -lt $Version) {
+            If (!$FirefoxV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($MozillaThunderbird -eq 1) {
+        $Product = "Mozilla Thunderbird"
+        $ThunderbirdD = Get-EvergreenApp -Name MozillaThunderbird | Where-Object { $_.Type -eq "msi" -and $_.Architecture -eq "$MozillaThunderbirdArchitectureClear" -and $_.Language -eq "$MozillaThunderbirdLanguageClear"}
+        $Version = $ThunderbirdD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MozillaThunderbirdArchitectureClear" + "_$MozillaThunderbirdLanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $MozillaThunderbirdV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Thunderbird*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$MozillaThunderbirdV) {
+            $MozillaThunderbirdV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Thunderbird*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $MozillaThunderbirdLanguageLongClear $MozillaThunderbirdArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $MozillaThunderbirdLanguageLongClear $MozillaThunderbirdArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $MozillaThunderbirdV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $MozillaThunderbirdV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($MozillaThunderbirdV -lt $Version) {
+            If (!$MozillaThunderbirdV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($mRemoteNG -eq 1) {
+        $Product = "mRemoteNG"
+        $mRemoteNGD = Get-EvergreenApp -Name mRemoteNG | Where-Object { $_.Type -eq "msi" }
+        $Version = $mRemoteNGD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $mRemoteNGV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "mRemoteNG"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$mRemoteNGV) {
+            $mRemoteNGV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "mRemoteNG"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($mRemoteNGV) {$mRemoteNGV = $mRemoteNGV -replace ".{6}$"}
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $mRemoteNGV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $mRemoteNGV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($mRemoteNGV -lt $Version) {
+            If (!$mRemoteNGV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Nmap -eq 1) {
+        $Product = "Nmap"
+        $NMapD = Get-NevergreenApp -Name NMap | Where-Object { $_.Architecture -eq "x86" -and $_.Type -eq "exe" }
+        $Version = $NMapD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $NmapV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Nmap*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$NmapV) {
+            $NmapV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Nmap*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $NmapV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $NmapV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($NmapV -lt $Version) {
+            If (!$NmapV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($NotePadPlusPlus -eq 1) {
+        $Product = "NotepadPlusPlus"
+        $NotepadD = Get-EvergreenApp -Name NotepadPlusPlus | Where-Object { $_.Architecture -eq "$NotepadPlusPlusArchitectureClear" -and $_.Type -eq "exe" }
+        $Version = $NotepadD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$NotepadPlusPlusArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $Notepad = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Notepad++*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$Notepad) {
+            $Notepad = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Notepad++*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $NotepadPlusPlusArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $NotepadPlusPlusArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $Notepad"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $Notepad"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($Notepad -lt $Version) {
+            If (!$Notepad) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($OpenJDK -eq 1) {
+        $Product = "OpenJDK"
+        If ($openJDK_Architecture -eq 3) {
+            $openJDKArchitectureClear = "x64"
+            $openJDKArchitecture2Clear = "x86"
+        }
+        If ($OpenJDKPackageClear -eq "8") {
+            $OpenJDKD = Get-EvergreenApp -Name OpenJDK | Where-Object { $_.Architecture -eq "$openJDKArchitectureClear" -and $_.Type -eq "msi" -and $_.Version -like "1.8*" -and $_.URI -notlike "*-jre-*"} | Sort-Object -Property Version -Descending | Select-Object -First 1
+        } Else {
+            $OpenJDKD = Get-EvergreenApp -Name OpenJDK | Where-Object { $_.Architecture -eq "$openJDKArchitectureClear" -and $_.Type -eq "msi" -and $_.Version -like "$OpenJDKPackageClear*" -and $_.URI -notlike "*-jre-*" -and $_.URI -notlike "*.jre.*"} | Sort-Object -Property Size -Descending | Select-Object -First 4 | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        $Version = $OpenJDKD.Version
+        If ($openJDKArchitectureClear -eq "x86") {
+            $x86Version = $Version.split("-x")
+            $Version = $x86Version[0] + $x86Version[1]
+        }
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$openJDKArchitectureClear" + "_$OpenJDKPackageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        If ($OpenJDKPackageClear -eq "8") {
+            If ($openJDKArchitectureClear -eq "x86") {
+                $OpenJDKV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 1.8*x86*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$OpenJDKV) {
+                    $OpenJDKV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 1.8*x86*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+            } else {
+                $OpenJDKV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 1.8*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$OpenJDKV) {
+                    $OpenJDKV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 1.8*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+            }
+            If ($CurrentVersion) {$CurrentVersion = $CurrentVersion -replace "-"}
+            If ($CurrentVersion) {$CurrentVersion = $CurrentVersion -replace "\.0"}
+            If ($CurrentVersion -like "*b0*") {$CurrentVersion = $CurrentVersion -replace "b0"}
+        }
+        If ($OpenJDKPackageClear -eq "11") {
+            $OpenJDKV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 11*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$OpenJDKV) {
+                $OpenJDKV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 11*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            If ($CurrentVersion) {$CurrentVersion = $CurrentVersion -replace ".-"}
+        }
+        If ($OpenJDKPackageClear -eq "15") {
+            $OpenJDKV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 15*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$OpenJDKV) {
+                $OpenJDKV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 15*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            If ($CurrentVersion) {$CurrentVersion = $CurrentVersion -replace ".-"}
+        }
+        If ($OpenJDKPackageClear -eq "17") {
+            $OpenJDKV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 17*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            If (!$OpenJDKV) {
+                $OpenJDKV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*OpenJDK 17*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            If ($CurrentVersion) {$CurrentVersion = $CurrentVersion -replace('-','.')}
+            If ($CurrentVersion) {$CurrentVersion = $CurrentVersion -replace('.0.1.','.001')}
+        }
+        Write-Host -ForegroundColor Magenta "$Product release $OpenJDKPackageClear $openJDKArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product release $OpenJDKPackageClear $openJDKArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $OpenJDKV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $OpenJDKV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($OpenJDKV -lt $Version) {
+            If (!$OpenJDKV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($OpenShellMenu -eq 1) {
+        $Product = "Open-Shell Menu"
+        $OpenShellMenuD = Get-EvergreenApp -Name OpenShellMenu
+        $Version = $OpenShellMenuD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $OpenShellMenuV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Open-Shell*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$OpenShellMenuV) {
+            $OpenShellMenuV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Open-Shell*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $OpenShellMenuV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $OpenShellMenuV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($OpenShellMenuV -lt $Version) {
+            If (!$OpenShellMenuV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($OperaBrowser -eq 1) {
+        $Product = "Opera Browser"
+        $OperaBrowserD = Get-EvergreenApp -Name OperaBrowser | Where-Object { $_.Architecture -eq "$OperaBrowserArchitectureClear" }
+        $Version = $OperaBrowserD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$OperaBrowserArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $OperaBrowserV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Opera*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$OperaBrowserV) {
+            $OperaBrowserV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Opera*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $OperaBrowserArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $OperaBrowserArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $OperaBrowserV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $OperaBrowserV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($OperaBrowserV -lt $Version) {
+            If (!$OperaBrowserV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($OracleJava8 -eq 1) {
+        $Product = "Oracle Java 8"
+        If ($OracleJava8_Architecture -eq 3) {
+            $OracleJava8ArchitectureClear = "x64"
+            $OracleJava8Architecture2Clear = "x86"
+        }
+        $OracleJava8D = Get-EvergreenApp -Name OracleJava8 | Where-Object { $_.Architecture -eq "$OracleJava8ArchitectureClear" }
+        $Version = $OracleJava8D.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$OracleJava8ArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $OracleJava = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Java 8*$OracleJava8ArchitectureVersionClear*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$OracleJava) {
+            $OracleJava = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Java 8*$OracleJava8ArchitectureVersionClear*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($OracleJava) {
+            $OracleJavaSplit = $OracleJava.split(".")
+            $OracleJavaSplit2 = (Select-String '.{3}' -Input $OracleJavaSplit[2]).Matches.Value
+            $OracleJava = "1." + $OracleJavaSplit[0] + "." + $OracleJavaSplit[1] + "_" + $OracleJavaSplit2 + "-b" + $OracleJavaSplit[3]
+        }
+        Write-Host -ForegroundColor Magenta "$Product $OracleJava8ArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $OracleJava8ArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $OracleJava"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $OracleJava"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($OracleJava -lt $Version) {
+            If (!$OracleJava) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($PaintDotNet -eq 1) {
+        $Product = "Paint.Net"
+        $PaintDotNetD = Get-EvergreenApp -Name PaintDotNetOfflineInstaller | Where-Object { $_.Architecture -eq "$PaintDotNetArchitectureClear" -and $_.URI -like "*winmsi*"}
+        $Version = $PaintDotNetD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$PaintDotNetArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $PaintDotNetV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Paint.Net*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$PaintDotNetV) {
+            $PaintDotNetV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Paint.Net*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $PaintDotNetArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $PaintDotNetArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $PaintDotNetV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $PaintDotNetV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($PaintDotNetV -lt $Version) {
+            If (!$PaintDotNetV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($PDF24Creator -eq 1) {
+        $Product = "PDF24 Creator"
+        $PDF24CreatorD = Get-evergreenApp -name GeekSoftwarePDF24Creator | Where-Object { $_.Type -eq "Msi"}
+        $Version = $PDF24CreatorD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $PDF24CreatorV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PDF24 Creator*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$PDF24CreatorV) {
+            $PDF24CreatorV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PDF24 Creator*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $PDF24CreatorV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $PDF24CreatorV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($PDF24CreatorV -lt $Version) {
+            If (!$PDF24CreatorV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($PDFForgeCreator -eq 1) {
+        $Product = "pdfforge PDFCreator"
+        $PDFForgeCreatorD = Get-PDFForgePDFCreator | Where-Object { $_.Channel -eq "$pdfforgePDFCreatorChannelClear" }
+        $Version = $PDFForgeCreatorD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$pdfforgePDFCreatorChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $PDFForgeCreatorV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "PDFCreator*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$PDFForgeCreatorV) {
+            $PDFForgeCreatorV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "PDFCreator*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $pdfforgePDFCreatorChannelClear edition"
+        Add-Content -Path "$ReportFile" -Value "$Product $pdfforgePDFCreatorChannelClear edition"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $PDFForgeCreatorV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $PDFForgeCreatorV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($PDFForgeCreatorV -lt $Version) {
+            If (!$PDFForgeCreatorV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($PDFsam -eq 1) {
+        $Product = "PDF Split & Merge"
+        $PDFsamD = Get-PDFsam
+        $Version = $PDFsamD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $PDFsamV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "PDFsam*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$PDFsamV) {
+            $PDFsamV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "PDFsam*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $PDFsamV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $PDFsamV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($PDFsamV -lt $Version) {
+            If (!$PDFsamV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($PeaZip -eq 1) {
+        $Product = "PeaZip"
+        $PeaZipD = Get-EvergreenApp -Name PeaZipPeaZip | Where-Object {$_.Architecture -eq "$PeaZipArchitectureClear" -and $_.Type -eq "exe"}
+        $Version = $PeaZipD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$PeaZipArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $PeaZipV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "PeaZip*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$PeaZipV) {
+            $PeaZipV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "PeaZip*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $PeaZipArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $PeaZipArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $PeaZipV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $PeaZipV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($PeaZipV -lt $Version) {
+            If (!$PeaZipV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($PuTTY -eq 1) {
+        $Product = "PuTTY"
+        $PuTTYD = Get-Putty | Where-Object { $_.Architecture -eq "$PuTTYArchitectureClear" -and $_.Channel -eq "$PuttyChannelClear"}
+        $Version = $PuTTYD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$PuTTYArchitectureClear" + "_$PuttyChannelClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $PuTTYV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PuTTY*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$PuTTYV) {
+            $PuTTYV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*PuTTY*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($PuTTYV) {
+            $PuTTYV = $PuTTYV.Split("\.",3)
+            $PuTTYV = $PuTTYV[0] + "." + $PuTTYV[1]
+        }
+        Write-Host -ForegroundColor Magenta "$Product $PuttyChannelClear $PuTTYArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $PuttyChannelClear $PuTTYArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $PuTTYV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $PuTTYV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($PuTTYV -lt $Version) {
+            If (!$PuTTYV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($RemoteDesktopManager -eq 1) {
+        Switch ($RemoteDesktopManagerType) {
+            0 {
+                $Product = "Remote Desktop Manager Free"
+            	$URLVersion = "https://devolutions.net/remote-desktop-manager/de/release-notes/free"
+                $webRequest = Invoke-WebRequest -UseBasicParsing -Uri ($URLVersion) -SessionVariable websession
+                $regexAppVersion = "\d\d\d\d\.\d\.\d\d\.\d+"
+                $webVersion = $webRequest.RawContent | Select-String -Pattern $regexAppVersion -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 1
+                $Version = $webVersion.Trim("</td>").Trim("</td>")
+                $RemoteDesktopManagerFreeD = $Version
+                $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+                $RemoteDesktopManagerFree = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Remote Desktop Manager*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                Write-Host -ForegroundColor Magenta "$Product"
+                Add-Content -Path "$ReportFile" -Value "$Product"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+                Write-Host "Downloaded Version: $CurrentVersion"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+                Write-Host "Installed Version:  $RemoteDesktopManagerFree"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $RemoteDesktopManagerFree"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion -lt $Version) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($RemoteDesktopManagerFree -lt $Version) {
+                    If (!$RemoteDesktopManagerFree) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+            1 {
+                $Product = "Remote Desktop Manager Enterprise"
+            	$URLVersion = "https://devolutions.net/remote-desktop-manager/de/release-notes"
+                $webRequest = Invoke-WebRequest -UseBasicParsing -Uri ($URLVersion) -SessionVariable websession
+                $regexAppVersion = "\d\d\d\d\.\d\.\d\d\.\d+"
+                $webVersionRDM = $webRequest.RawContent | Select-String -Pattern $regexAppVersion -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 1
+                $Version = $webVersionRDM.Trim("</td>").Trim("</td>")
+                $RemoteDesktopManagerEnterpriseD = $Version
+                $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+                $RemoteDesktopManagerEnterprise = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Remote Desktop Manager*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                Write-Host -ForegroundColor Magenta "$Product"
+                Add-Content -Path "$ReportFile" -Value "$Product"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+                Write-Host "Downloaded Version: $CurrentVersion"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+                Write-Host "Installed Version:  $RemoteDesktopManagerEnterprise"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $RemoteDesktopManagerEnterprise"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion -lt $Version) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($RemoteDesktopManagerEnterprise -lt $Version) {
+                    If (!$RemoteDesktopManagerEnterprise) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+        }
+    }
+
+    If ($Screenpresso -eq 1) {
+        $Product = "Screenpresso"
+        $ScreenpressoD = Get-Screenpresso
+        $Version = $ScreenpressoD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $ScreenpressoV = (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Screenpresso"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$ScreenpressoV) {
+            $ScreenpressoV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Screenpresso"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If (!$ScreenpressoV) {
+            $ScreenpressoV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Screenpresso"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $ScreenpressoV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $ScreenpressoV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($ScreenpressoV -lt $Version) {
+            If (!$ScreenpressoV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($ShareX -eq 1) {
+        $Product = "ShareX"
+        $ShareXD = Get-EvergreenApp -Name ShareX | Where-Object {$_.Type -eq "exe"}
+        $Version = $ShareXD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $ShareXV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*ShareX*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$ShareXV) {
+            $ShareXV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*ShareX*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $ShareXV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $ShareXV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($ShareXV -lt $Version) {
+            If (!$ShareXV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Slack -eq 1) {
+        $Product = "Slack"
+        $SlackD = Get-EvergreenApp -Name Slack | Where-Object {$_.Architecture -eq "$SlackArchitectureClear" -and $_.Platform -eq "PerMachine" }
+        $Version = $SlackD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$SlackArchitectureClear" + "_$SlackPlatformClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $SlackV = (Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Slack*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$SlackV) {
+            $SlackV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Slack*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If (!$SlackV) {
+            $SlackV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Slack*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If (!$SlackV) {
+        }
+        Else {
+            If ($SlackV.length -ne "6") {$SlackV = $SlackV -replace ".{2}$"}
+        }
+        Write-Host -ForegroundColor Magenta "$Product $SlackArchitectureClear $SlackPlatformClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $SlackArchitectureClear $SlackPlatformClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $SlackV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $SlackV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($SlackV -lt $Version) {
+            If (!$SlackV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($SumatraPDF -eq 1) {
+        $Product = "Sumatra PDF"
+        $SumatraPDFD = Get-EvergreenApp -Name SumatraPDFReader | Where-Object {$_.Architecture -eq "$SumatraPDFArchitectureClear" }
+        $Version = $SumatraPDFD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$SumatraPDFArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $SumatraPDFV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "SumatraPDF"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$SumatraPDFV) {
+            $SumatraPDFV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "SumatraPDF"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $SumatraPDFArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $SumatraPDFArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $SumatraPDFV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $SumatraPDFV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($SumatraPDFV -lt $Version) {
+            If (!$SumatraPDFV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($TeamViewer -eq 1) {
+        $Product = "TeamViewer"
+        $TeamViewerD = Get-EvergreenApp -Name TeamViewer
+        $Version = $TeamViewerD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$TeamViewerArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $TeamViewerV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TeamViewer*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$TeamViewerV) {
+            $TeamViewerV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "TeamViewer"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $TeamViewerArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $TeamViewerArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $TeamViewerV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $TeamViewerV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($TeamViewerV -lt $Version) {
+            If (!$TeamViewerV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($TechSmithCamtasia -eq 1) {
+        $Product = "TechSmith Camtasia"
+        $TechSmithCamtasiaD = Get-EvergreenApp -Name TechSmithCamtasia | Where-Object { $_.Type -eq "msi" }
+        $Version = $TechSmithCamtasiaD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $TechSmithCamtasiaV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Camtasia*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$TechSmithCamtasiaV) {
+            $TechSmithCamtasiaV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Camtasia*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($TechSmithCamtasiaV) {$TechSmithCamtasiaSplit = $TechSmithCamtasiaV.split(".")}
+        If ($TechSmithCamtasiaSplit) {$TechSmithCamtasiaStrings = ([regex]::Matches($TechSmithCamtasiaV, "\." )).count}
+        Switch ($TechSmithCamtasiaStrings) {
+            1 {
+                $TechSmithCamtasiaVN = $TechSmithCamtasiaSplit[0] + "." + $TechSmithCamtasiaSplit[1]
+            }
+            2 {
+                $TechSmithCamtasiaVN = $TechSmithCamtasiaSplit[0] + "." + $TechSmithCamtasiaSplit[1] + "." + $TechSmithCamtasiaSplit[2]
+            }
+            3 {
+                $TechSmithCamtasiaVN = $TechSmithCamtasiaSplit[0] + "." + $TechSmithCamtasiaSplit[1] + "." + $TechSmithCamtasiaSplit[2]
+            }
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $TechSmithCamtasiaVN"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $TechSmithCamtasiaVN"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($TechSmithCamtasiaVN -lt $Version) {
+            If (!$TechSmithCamtasiaVN) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($TechSmithSnagIt -eq 1) {
+        $Product = "TechSmith SnagIt"
+        $TechSmithSnagitD = Get-EvergreenApp -Name TechSmithSnagit | Where-Object { $_.Architecture -eq "$TechSmithSnagItArchitectureClear" -and $_.Type -eq "msi" }
+        $Version = $TechSmithSnagitD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$TechSmithSnagItArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $TechSmithSnagItV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "SnagIt*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$TechSmithSnagItV) {
+            $TechSmithSnagItV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "SnagIt*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $TechSmithSnagItArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $TechSmithSnagItArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $TechSmithSnagItV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $TechSmithSnagItV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($TechSmithSnagItV -lt $Version) {
+            If (!$TechSmithSnagItV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($TotalCommander -eq 1) {
+        $Product = "Total Commander"
+        $TotalCommanderD = Get-TotalCommander | Where-Object {$_.Architecture -eq "$TotalCommanderArchitectureClear"}
+        $Version = $TotalCommanderD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$TotalCommanderArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $TotalCommanderV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Total Commander*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$TotalCommanderV) {
+            $TotalCommanderV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Total Commander*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $TotalCommanderArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $TotalCommanderArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $TotalCommanderV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $TotalCommanderV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($TotalCommanderV -lt $Version) {
+            If (!$TotalCommanderV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($TreeSize -eq 1) {
+        Switch ($TreeSizeType) {
+            0 {
+                $Product = "TreeSize Free"
+                $TreeSizeFreeD = Get-EvergreenApp -Name JamTreeSizeFree
+                $Version = $TreeSizeFreeD.Version
+                $VersionC = ([regex]::Matches($Version, "\." )).count
+                If ($VersionC -ne 2){
+                    $Version = $Version.Insert(3,'.')
+                }
+                $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+                $CurrentVersionC = ([regex]::Matches($CurrentVersion, "\." )).count
+                If ($CurrentVersionC -ne 2){
+                    $CurrentVersion = $CurrentVersion.Insert(3,'.')
+                }
+                $TreeSizeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize Free*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$TreeSizeV) {
+                    $TreeSizeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize Free*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+                Write-Host -ForegroundColor Magenta "$Product"
+                Add-Content -Path "$ReportFile" -Value "$Product"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+                Write-Host "Downloaded Version: $CurrentVersion"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+                Write-Host "Installed Version:  $TreeSizeV"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $TreeSizeV"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion -lt $Version) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($TreeSizeV -lt $Version) {
+                    If (!$TreeSizeV) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+            1 {
+                $Product = "TreeSize Professional"
+                $TreeSizeProfD = Get-EvergreenApp -Name JamTreeSizeProfessional
+                $Version = $TreeSizeProfD.Version
+                $VersionC = ([regex]::Matches($Version, "\." )).count
+                If ($VersionC -ne 2){
+                    $Version = $Version.Insert(3,'.')
+                }
+                $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+                $CurrentVersionC = ([regex]::Matches($CurrentVersion, "\." )).count
+                If ($CurrentVersionC -ne 2){
+                    $CurrentVersion = $CurrentVersion.Insert(3,'.')
+                }
+                $TreeSizeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize V*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$TreeSizeV) {
+                    $TreeSizeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize V*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+                Write-Host -ForegroundColor Magenta "$Product"
+                Add-Content -Path "$ReportFile" -Value "$Product"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+                Write-Host "Downloaded Version: $CurrentVersion"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+                Write-Host "Installed Version:  $TreeSizeV"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $TreeSizeV"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion -lt $Version) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($TreeSizeV -lt $Version) {
+                    If (!$TreeSizeV) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+        }
+    }
+
+    If ($VLCPlayer -eq 1) {
+        $Product = "VLC Player"
+        $VLCD = Get-EvergreenApp -Name VideoLanVlcPlayer | Where-Object { $_.Platform -eq "Windows" -and $_.Architecture -eq "$VLCPlayerArchitectureClear" -and $_.Type -eq "MSI" }
+        $Version = $VLCD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$VLCPlayerArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $VLC = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*VLC*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$VLC) {
+            $VLC = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*VLC*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($VLC) {$VLC = $VLC -replace ".{2}$"}
+        Write-Host -ForegroundColor Magenta "$Product $VLCPlayerArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $VLCPlayerArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $VLC"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $VLC"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($VLC -lt $Version) {
+            If (!$VLC) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($VMWareTools -eq 1) {
+        $Product = "VMWare Tools"
+        $VMWareToolsD = Get-VMwareTools | Where-Object { $_.Architecture -eq "$VMWareToolsArchitectureClear" }
+        $Version = $VMWareToolsD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$VMWareToolsArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $VMWT = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*VMWare*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$VMWT) {
+            $VMWT = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*VMWare*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($VMWT) {$VMWT = $VMWT -replace ".{9}$"}
+        Write-Host -ForegroundColor Magenta "$Product $VMWareToolsArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $VMWareToolsArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $VMWT"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $VMWT"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($VMWT -lt $Version) {
+            If (!$VMWT) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($WinMerge -eq 1) {
+        $Product = "WinMerge"
+        $WinMergeD = Get-EvergreenApp -Name WinMerge | Where-Object {$_.Architecture -eq "$WinMergeArchitectureClear" -and $_.URI -notlike "*PerUser*"}
+        $Version = $WinMergeD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$WinMergeArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $WinMergeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "WinMerge*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$WinMergeV) {
+            $WinMergeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "WinMerge*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $WinMergeArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $WinMergeArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $WinMergeV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $WinMergeV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($WinMergeV -lt $Version) {
+            If (!$WinMergeV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($WinRAR -eq 1) {
+        $Product = "WinRAR"
+        $WinRARD = Get-WinRAR | Where-Object {$_.Architecture -eq "$WinRARArchitectureClear" -and $_.Channel -eq "$WinRARChannelClear" -and $_.Language -eq "$WinRARLanguageClear"}
+        $Version = $WinRARD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$WinRARArchitectureClear" + "_$WinRARChannelClear" + "_$WinRARLanguageClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $WinRARV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "WinRAR*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$WinRARV) {
+            $WinRARV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "WinRAR*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($WinRARV) {$WinRARV = $WinRARV -replace "\.\d*$"}
+        Write-Host -ForegroundColor Magenta "$Product $WinRARChannelClear release $WinRARLanguageClear $WinRARArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $WinRARChannelClear release $WinRARLanguageClear $WinRARArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $WinRARV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $WinRARV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($WinRARV -lt $Version) {
+            If (!$WinRARV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($WinSCP -eq 1) {
+        $Product = "WinSCP"
+        $WinSCPD = Get-EvergreenApp -Name WinSCP | Where-Object {$_.URI -like "*Setup*"}
+        $Version = $WinSCPD.Version
+        $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+        $WSCP = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*WinSCP*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $WSCP"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $WSCP"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($WSCP -lt $Version) {
+            If (!$WSCP) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Wireshark -eq 1) {
+        $Product = "Wireshark"
+        $WiresharkD = Get-EvergreenApp -Name Wireshark | Where-Object { $_.Architecture -eq "$WiresharkArchitectureClear" -and $_.Type -eq "exe"}
+        $Version = $WiresharkD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version_" + "$WiresharkArchitectureClear" + ".txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $WiresharkV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Wireshark*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$WiresharkV) {
+            $WiresharkV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Wireshark*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product $WiresharkArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value "$Product $WiresharkArchitectureClear"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $WiresharkV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $WiresharkV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($WiresharkV -lt $Version) {
+            If (!$WiresharkV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($XCA -eq 1) {
+        $Product = "XCA"
+        $XCAD = Get-XCA
+        $Version = $XCAD.Version
+        $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        $XCAV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*XCA*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        If (!$XCAV) {
+            $XCAV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*XCA*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        Write-Host -ForegroundColor Magenta "$Product"
+        Add-Content -Path "$ReportFile" -Value "$Product"
+        Add-Content -Path "$ReportFile" -Value ""
+        Write-Host "Internet Version:   $Version"
+        Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+        Write-Host "Downloaded Version: $CurrentVersion"
+        Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+        Write-Host "Installed Version:  $XCAV"
+        Add-Content -Path "$ReportFile" -Value "Installed Version:  $XCAV"
+        Add-Content -Path "$ReportFile" -Value ""
+        If ($CurrentVersion -lt $Version) {
+            Write-Host -ForegroundColor Yellow "New version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        } Else {
+            Write-Host -ForegroundColor Green "No new version available in the internet"
+            Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+        If ($XCAV -lt $Version) {
+            If (!$XCAV) {
+                Write-Host -ForegroundColor Cyan "No installed version found"
+                Add-Content -Path "$ReportFile" -Value "No installed version found"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Yellow "Update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+        } Else {
+            Write-Host -ForegroundColor Green "No update available for installed version"
+            Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+            Write-Output ""
+            Add-Content -Path "$ReportFile" -Value ""
+        }
+    }
+
+    If ($Zoom -eq 1) {
+        If ($ZoomCitrixClient -eq 0) {
+            If ($ZoomInstallerClear -eq 'User Based') {
+                $Product = "Zoom"
+                $ZoomD = Get-NevergreenApp -Name Zoom | Where-Object {$_.Name -eq "Zoom" -and $_.Architecture -eq "$ZoomArchitectureClear" -and $_.Type -eq "Msi"}
+                $Version = $ZoomD.Version
+                $VersionSplit = $Version.split(".")
+                $Version = $VersionSplit[0] + "." + $VersionSplit[1] + "." + $VersionSplit[3]
+                $VersionPath = "$PSScriptRoot\$Product\Version_" + "$ZoomArchitectureClear" + ".txt"
+                $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+                $ZoomV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Zoom"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$ZoomV) {
+                    $ZoomV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Zoom"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+                Write-Host -ForegroundColor Magenta "$Product $ZoomArchitectureClear"
+                Add-Content -Path "$ReportFile" -Value "$Product $ZoomArchitectureClear"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $Version"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+                Write-Host "Downloaded Version: $CurrentVersion"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+                Write-Host "Installed Version:  $ZoomV"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $ZoomV"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion -lt $Version) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($ZoomV -lt $Version) {
+                    If (!$ZoomV) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+            If ($ZoomInstallerClear -eq 'Machine Based') {
+                $Product = "Zoom VDI"
+                $ZoomD = Get-ZoomVDI
+                $Version = $ZoomD.Version
+                $VersionApps = $ZoomD.VersionApps
+                $VersionPath = "$PSScriptRoot\$Product\Version" + ".txt"
+                $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+                $ZoomV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Zoom Client for VDI*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                Write-Host -ForegroundColor Magenta "$Product"
+                Add-Content -Path "$ReportFile" -Value "$Product"
+                Add-Content -Path "$ReportFile" -Value ""
+                Write-Host "Internet Version:   $VersionApps"
+                Add-Content -Path "$ReportFile" -Value "Internet Version:   $VersionApps"
+                Write-Host "Downloaded Version: $CurrentVersion"
+                Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+                Write-Host "Installed Version:  $ZoomV"
+                Add-Content -Path "$ReportFile" -Value "Installed Version:  $ZoomV"
+                Add-Content -Path "$ReportFile" -Value ""
+                If ($CurrentVersion -lt $VersionApps) {
+                    Write-Host -ForegroundColor Yellow "New version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Green "No new version available in the internet"
+                    Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+                If ($ZoomV -lt $VersionApps) {
+                    If (!$ZoomV) {
+                        Write-Host -ForegroundColor Cyan "No installed version found"
+                        Add-Content -Path "$ReportFile" -Value "No installed version found"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    } Else {
+                        Write-Host -ForegroundColor Yellow "Update available for installed version"
+                        Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                        Write-Output ""
+                        Add-Content -Path "$ReportFile" -Value ""
+                    }
+                } Else {
+                    Write-Host -ForegroundColor Green "No update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            }
+        }
+    }
+    If ($Zoom -eq 1) {
+        If ($ZoomCitrixClient -eq 1) {
+            $Product = "Zoom Citrix HDX Media Plugin"
+            $ZoomCitrix = Get-NevergreenApp -Name Zoom -EA SilentlyContinue | Where-Object {$_.Name -like "*Citrix*"}
+            $Version = $ZoomCitrix.version
+            $VersionPath = "$PSScriptRoot\$Product\Version.txt"
+            $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+            $ZoomV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Zoom Plugin*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            Write-Host -ForegroundColor Magenta "$Product"
+            Add-Content -Path "$ReportFile" -Value "$Product"
+            Add-Content -Path "$ReportFile" -Value ""
+            Write-Host "Internet Version:   $Version"
+            Add-Content -Path "$ReportFile" -Value "Internet Version:   $Version"
+            Write-Host "Downloaded Version: $CurrentVersion"
+            Add-Content -Path "$ReportFile" -Value "Downloaded Version: $CurrentVersion"
+            Write-Host "Installed Version:  $ZoomV"
+            Add-Content -Path "$ReportFile" -Value "Installed Version:  $ZoomV"
+            Add-Content -Path "$ReportFile" -Value ""
+            If ($CurrentVersion -lt $Version) {
+                Write-Host -ForegroundColor Yellow "New version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "New version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            } Else {
+                Write-Host -ForegroundColor Green "No new version available in the internet"
+                Add-Content -Path "$ReportFile" -Value "No new version available in the internet"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
+            If ($ZoomV -lt $Version) {
+                If (!$ZoomV) {
+                    Write-Host -ForegroundColor Cyan "No installed version found"
+                    Add-Content -Path "$ReportFile" -Value "No installed version found"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                } Else {
+                    Write-Host -ForegroundColor Yellow "Update available for installed version"
+                    Add-Content -Path "$ReportFile" -Value "Update available for installed version"
+                    Write-Output ""
+                    Add-Content -Path "$ReportFile" -Value ""
+                }
+            } Else {
+                Write-Host -ForegroundColor Green "No update available for installed version"
+                Add-Content -Path "$ReportFile" -Value "No update available for installed version"
+                Write-Output ""
+                Add-Content -Path "$ReportFile" -Value ""
+            }
         }
     }
 }
@@ -11403,14 +16188,26 @@ If ($Download -eq "1") {
         If ($CiscoWebexTeamsClient -eq "0") {
             $Product = "Cisco Webex Teams"
             $PackageName = "webexteams-" + "$CiscoWebexTeamsArchitectureClear"
-            $WebexTeamsD = Get-NevergreenApp -Name CiscoWebex | Where-Object { $_.Architecture -eq "$CiscoWebexTeamsArchitectureClear" -and $_.Type -eq "Msi" }
+            $WebexTeamsD = Get-CiscoWebex | Where-Object { $_.Architecture -eq "$CiscoWebexTeamsArchitectureClear"}
             $Version = $WebexTeamsD.Version
+            $CiscoSplit = $Version.split(".")
+            $CiscoStringMiddle = ([regex]::Matches($CiscoSplit[1], "." )).count
+            If ($CiscoStringMiddle -lt "2") {
+                $CiscoSplit[1] = "0" + $CiscoSplit[1]
+                $Version = $CiscoSplit[0] + "." + $CiscoSplit[1] + "." + $CiscoSplit[2] + "." + $CiscoSplit[3]
+            }
             $URL = $WebexTeamsD.uri
             Add-Content -Path "$FWFile" -Value "$URL"
             $InstallerType = "msi"
             $Source = "$PackageName" + "." + "$InstallerType"
             $VersionPath = "$PSScriptRoot\$Product\Version_" + "$CiscoWebexTeamsArchitectureClear" + ".txt"
             $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+            $CiscoCurrentSplit = $CurrentVersion.split(".")
+            $CiscoCurrentStringMiddle = ([regex]::Matches($CiscoCurrentSplit[1], "." )).count
+            If ($CiscoCurrentStringMiddle -lt "2") {
+                $CiscoCurrentSplit[1] = "0" + $CiscoCurrentSplit[1]
+                $CurrentVersion = $CiscoCurrentSplit[0] + "." + $CiscoCurrentSplit[1] + "." + $CiscoCurrentSplit[2] + "." + $CiscoCurrentSplit[3]
+            }
             Write-Host -ForegroundColor Magenta "Download $Product $CiscoWebexTeamsArchitectureClear"
             Write-Host "Download Version: $Version"
             Write-Host "Current Version:  $CurrentVersion"
@@ -13208,7 +18005,7 @@ If ($Download -eq "1") {
     If ($MSAVDRemoteDesktop -eq 1) {
         $Product = "Microsoft AVD Remote Desktop"
         $PackageName = "RemoteDesktop_" + "$MSAVDRemoteDesktopArchitectureClear" + "_$MSAVDRemoteDesktopChannelClear"
-        $MSAVDRemoteDesktopD = Get-EvergreenApp -Name MicrosoftWVDRemoteDesktop | Where-Object { $_.Architecture -eq "$MSAVDRemoteDesktopArchitectureClear" -and $_.Channel -eq "$MSAVDRemoteDesktopChannelClear" }
+        $MSAVDRemoteDesktopD = Get-EvergreenApp -Name MicrosoftWVDRemoteDesktop -WarningAction:SilentlyContinue | Where-Object { $_.Architecture -eq "$MSAVDRemoteDesktopArchitectureClear" -and $_.Channel -eq "$MSAVDRemoteDesktopChannelClear" }
         $Version = $MSAVDRemoteDesktopD.Version
         $URL = $MSAVDRemoteDesktopD.uri
         Add-Content -Path "$FWFile" -Value "$URL"
@@ -14303,12 +19100,22 @@ If ($Download -eq "1") {
         $PackageName = "SSMS-Setup_" + "$MSSQLServerManagementStudioLanguageClear"
         $MSSQLServerManagementStudioD = Get-EvergreenApp -Name MicrosoftSsms -ea silentlyContinue -WarningAction silentlyContinue | Where-Object { $_.Language -eq "$MSSQLServerManagementStudioLanguageClear" }
         $Version = $MSSQLServerManagementStudioD.Version
+        If ($Version) {
+            $VersionSplit = $Version.split(".")
+            $VersionSplit2 = $VersionSplit[2].Substring(0,3)
+            $Version = $VersionSplit[0] + "." + $VersionSplit[1] + "." + $VersionSplit2
+        }
         $URL = $MSSQLServerManagementStudioD.uri
         Add-Content -Path "$FWFile" -Value "$URL"
         $InstallerType = "exe"
         $Source = "$PackageName" + "." + "$InstallerType"
         $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSSQLServerManagementStudioLanguageClear" + ".txt"
         $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
+        If ($CurrentVersion) {
+            $VersionSplit = $CurrentVersion.split(".")
+            $VersionSplit2 = $VersionSplit[2].Substring(0,3)
+            $CurrentVersion = $VersionSplit[0] + "." + $VersionSplit[1] + "." + $VersionSplit2
+        }
         Write-Host -ForegroundColor Magenta "Download $Product $MSSQLServerManagementStudioLanguageClear"
         Write-Host "Download Version: $Version"
         Write-Host "Current Version:  $CurrentVersion"
@@ -14432,8 +19239,8 @@ If ($Download -eq "1") {
                 $NewCurrentVersion = $CurrentTeamsSplit[0] + "." + $CurrentTeamsSplit[1] + "." + $CurrentTeamsSplit[2] + "." + $CurrentTeamsSplit[3]
             }
             Write-Host -ForegroundColor Magenta "Download $Product $MSTeamsRingClear ring $MSTeamsArchitectureClear"
-            Write-Host "Download Version: $Version"
-            Write-Host "Current Version:  $CurrentVersion"
+            Write-Host "Download Version: $NewVersion"
+            Write-Host "Current Version:  $NewCurrentVersion"
             If ($NewCurrentVersion -ne $NewVersion) {
                 Write-Host -ForegroundColor Green "Update available"
                 If ($WhatIf -eq '0') {
@@ -16380,7 +21187,7 @@ If ($Download -eq "1") {
         $InstallerType = "exe"
         $Source = "$PackageName" + "." + "$InstallerType"
         $VersionPath = "$PSScriptRoot\$Product\Version_" + "$TeamViewerArchitectureClear" + ".txt"
-        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue        
+        $CurrentVersion = Get-Content -Path "$VersionPath" -EA SilentlyContinue
         Write-Host -ForegroundColor Magenta "Download $Product $TeamViewerArchitectureClear"
         Write-Host "Download Version: $Version"
         Write-Host "Current Version:  $CurrentVersion"
@@ -16569,11 +21376,19 @@ If ($Download -eq "1") {
                 $PackageName = "TreeSize_Free"
                 $TreeSizeFreeD = Get-EvergreenApp -Name JamTreeSizeFree
                 $Version = $TreeSizeFreeD.Version
+                $VersionC = ([regex]::Matches($Version, "\." )).count
+                If ($VersionC -ne 2){
+                    $Version = $Version.Insert(3,'.')
+                }
                 $URL = $TreeSizeFreeD.uri
                 Add-Content -Path "$FWFile" -Value "$URL"
                 $InstallerType = "exe"
                 $Source = "$PackageName" + "." + "$InstallerType"
                 $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+                $CurrentVersionC = ([regex]::Matches($CurrentVersion, "\." )).count
+                If ($CurrentVersionC -ne 2){
+                    $CurrentVersion = $CurrentVersion.Insert(3,'.')
+                }
                 Write-Host -ForegroundColor Magenta "Download $Product"
                 Write-Host "Download Version: $Version"
                 Write-Host "Current Version:  $CurrentVersion"
@@ -16614,11 +21429,19 @@ If ($Download -eq "1") {
                 $PackageName = "TreeSize_Professional"
                 $TreeSizeProfD = Get-EvergreenApp -Name JamTreeSizeProfessional
                 $Version = $TreeSizeProfD.Version
+                $VersionC = ([regex]::Matches($Version, "\." )).count
+                If ($VersionC -ne 2){
+                    $Version = $Version.Insert(3,'.')
+                }
                 $URL = $TreeSizeProfD.uri
                 Add-Content -Path "$FWFile" -Value "$URL"
                 $InstallerType = "exe"
                 $Source = "$PackageName" + "." + "$InstallerType"
                 $CurrentVersion = Get-Content -Path "$PSScriptRoot\$Product\Version.txt" -EA SilentlyContinue
+                $CurrentVersionC = ([regex]::Matches($CurrentVersion, "\." )).count
+                If ($CurrentVersionC -ne 2){
+                    $CurrentVersion = $CurrentVersion.Insert(3,'.')
+                }
                 Write-Host -ForegroundColor Magenta "Download $Product"
                 Write-Host "Download Version: $Version"
                 Write-Host "Current Version:  $CurrentVersion"
@@ -17261,7 +22084,7 @@ If ($Install -eq "1") {
             Try {
                 Write-Host "Starting install of $Product version $Version"
                 If ($WhatIf -eq '0') {
-                    Start-Process "$PSScriptRoot\$Product\$1PasswordInstaller" -ArgumentList --Silent
+                    Start-Process "$PSScriptRoot\$Product\$1PasswordInstaller"
                 }
                 $p = Get-Process 1Password-Setup -ErrorAction SilentlyContinue
                 If ($p) {
@@ -17567,7 +22390,7 @@ If ($Install -eq "1") {
         }
         If ($DWGTrueView) {$DWGTrueViewV = $DWGTrueView.split(" ")[2]}
         $AutodeskDWGTrueViewInstaller = "AutodeskDWGTrueView.exe"
-        $InstallMSI = "$PSScriptRoot\$Product\DWGTrueView_2022_English_64bit_dlm\x64\dwgviewr\DWGVIEWR.msi"
+        $InstallMSI = "$PSScriptRoot\$Product\DWGTrueView_2023_English_64bit_dlm\x64\dwgviewr\dwgviewr.msi"
         Write-Host -ForegroundColor Magenta "Install $Product"
         Write-Host "Download Version: $Version"
         Write-Host "Current Version:  $DWGTrueViewV"
@@ -17640,6 +22463,10 @@ If ($Install -eq "1") {
         $BISFV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Base Image*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
         If (!$BISFV) {
             $BISFV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*Base Image*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+        }
+        If ($BISFV) {
+            $BISFSplit = $BISFV.split(".")
+            $BISFV = $BISFSplit[0] + "." + $BISFSplit[1] + "." + $BISFSplit[2]
         }
         $BISFLog = "$LogTemp\BISF.log"
         $InstallMSI = "$PSScriptRoot\$Product\setup-BIS-F.msi"
@@ -17727,9 +22554,21 @@ If ($Install -eq "1") {
             If (!($Version)) {
                 $Version = $WebexTeamsD.Version
             }
+            $CiscoSplit = $Version.split(".")
+            $CiscoStringMiddle = ([regex]::Matches($CiscoSplit[1], "." )).count
+            If ($CiscoStringMiddle -lt "2") {
+                $CiscoSplit[1] = "0" + $CiscoSplit[1]
+                $Version = $CiscoSplit[0] + "." + $CiscoSplit[1] + "." + $CiscoSplit[2] + "." + $CiscoSplit[3]
+            }
             $CiscoWebexTeamsV = (Get-ItemProperty HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Webex"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
             If (!$CiscoWebexTeamsV) {
                 $CiscoWebexTeamsV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -eq "Webex"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+            $CiscoDSplit = $CiscoWebexTeamsV.split(".")
+            $CiscoDStringMiddle = ([regex]::Matches($CiscoDSplit[1], "." )).count
+            If ($CiscoDStringMiddle -lt "2") {
+                $CiscoDSplit[1] = "0" + $CiscoDSplit[1]
+                $CiscoWebexTeamsV = $CiscoDSplit[0] + "." + $CiscoDSplit[1] + "." + $CiscoDSplit[2] + "." + $CiscoDSplit[3]
             }
             $WebexLog = "$LogTemp\WebexTeams.log"
             $InstallMSI = "$PSScriptRoot\$Product\webexteams-" + "$CiscoWebexTeamsArchitectureClear" + ".msi"
@@ -20452,7 +25291,7 @@ If ($Install -eq "1") {
             $MSPowerBIDesktopV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "Microsoft PowerBI Desktop*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
         }
         $MSPowerBIDesktopInstaller = "PBIDesktopSetup_" + "$MSPowerBIDesktopArchitectureClear"
-        Write-Host -ForegroundColor Magenta "Install $Product!"
+        Write-Host -ForegroundColor Magenta "Install $Product  $MSPowerBIDesktopArchitectureClear"
         Write-Host "Download Version: $Version"
         Write-Host "Current Version:  $MSPowerBIDesktopV"
         If ($MSPowerBIDesktopV -ne $Version) {
@@ -20776,6 +25615,15 @@ If ($Install -eq "1") {
             # Check, if a new version is available
             $VersionPath = "$PSScriptRoot\$Product\Version_" + "$MSTeamsArchitectureClear" + "_$MSTeamsRingClear" + ".txt"
             $Version = Get-Content -Path "$VersionPath" -ErrorAction SilentlyContinue
+            If ($Version) {
+                $TeamsSplit = $Version.split(".")
+                $TeamsStrings = ([regex]::Matches($Version, "\." )).count
+                $TeamsStringLast = ([regex]::Matches($TeamsSplit[$TeamsStrings], "." )).count
+                If ($TeamsStringLast -lt "5") {
+                    $TeamsSplit[$TeamsStrings] = "0" + $TeamsSplit[$TeamsStrings]
+                }
+                $Version = $TeamsSplit[0] + "." + $TeamsSplit[1] + "." + $TeamsSplit[2] + "." + $TeamsSplit[3]
+            }
             If (!($Version)) {
                 $Version = $TeamsD.Version
             }
@@ -23390,8 +28238,14 @@ If ($Install -eq "1") {
                 If (!($Version)) {
                     $Version = $TreeSizeFreeD.Version
                 }
-                $Version = $Version.Insert(3,'.')
-                $TreeSizeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                $VersionC = ([regex]::Matches($Version, "\." )).count
+                If ($VersionC -ne 2){
+                    $Version = $Version.Insert(3,'.')
+                }
+                $TreeSizeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize Free*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$TreeSizeV) {
+                    $TreeSizeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize Free*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
                 Write-Host -ForegroundColor Magenta "Install $Product"
                 Write-Host "Download Version: $Version"
                 Write-Host "Current Version:  $TreeSizeV"
@@ -23442,8 +28296,14 @@ If ($Install -eq "1") {
                 If (!($Version)) {
                     $Version = $TreeSizeProfD.Version
                 }
-                $Version = $Version.Insert(3,'.')
-                $TreeSizeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                $VersionC = ([regex]::Matches($Version, "\." )).count
+                If ($VersionC -ne 2){
+                    $Version = $Version.Insert(3,'.')
+                }
+                $TreeSizeV = (Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize V*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                If (!$TreeSizeV) {
+                    $TreeSizeV = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -like "*TreeSize V*"}).DisplayVersion | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
                 Write-Host -ForegroundColor Magenta "Install $Product"
                 Write-Host "Download Version: $Version"
                 Write-Host "Current Version:  $TreeSizeV"
